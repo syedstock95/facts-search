@@ -57,6 +57,8 @@
     .qr-code-box { background: white; border-radius: 12px; padding: 15px; display: inline-block; margin-bottom: 15px; }
     .qr-code-box img { display: block; width: 150px; height: 150px; }
     .install-steps { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .install-step-link { text-decoration: none; display: block; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; transition: all 0.2s; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+    .install-step-link:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3); transform: translateY(-2px); }
     .install-step { text-align: center; }
     .install-step .step-icon { font-size: 28px; margin-bottom: 5px; }
     .install-step .step-label { color: rgba(255,255,255,0.6); font-size: 11px; }
@@ -172,18 +174,18 @@
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://facts-search-production.up.railway.app" alt="QR Code - Facts Search">
         </div>
         <div class="install-steps">
-          <div class="install-step">
-            <div class="step-icon">📷</div>
-            <div class="step-label">Scan QR Code</div>
-          </div>
-          <div class="install-step">
-            <div class="step-icon">🍎</div>
-            <div class="step-label">iOS: Tap Share → Add to Home</div>
-          </div>
-          <div class="install-step">
-            <div class="step-icon">🤖</div>
-            <div class="step-label">Android: Tap Menu → Install App</div>
-          </div>
+          <a href="https://facts-search-production.up.railway.app" class="install-step-link" target="_blank">
+            <div class="install-step">
+              <div class="step-icon">🍎</div>
+              <div class="step-label">iPhone: Open link → Tap Share ↑ → "Add to Home Screen"</div>
+            </div>
+          </a>
+          <a href="https://facts-search-production.up.railway.app" class="install-step-link" target="_blank">
+            <div class="install-step">
+              <div class="step-icon">🤖</div>
+              <div class="step-label">Android: Open link → Tap ⋮ Menu → "Install App"</div>
+            </div>
+          </a>
         </div>
       </div>
     </div>
@@ -393,10 +395,18 @@
 
         if (data.success) {
           currentUser = data.email;
-          document.getElementById('verify-email-display').textContent = currentUser;
-          showScreen('verify-screen');
-          startResendCooldown();
-          setTimeout(() => codeInputs[0].focus(), 300);
+          
+          if (data.needsVerification === false) {
+            // Already verified — go straight to app
+            document.getElementById('user-email').innerHTML = '👤 ' + currentUser + ' <span class="verified-badge">✓</span>';
+            showScreen('app-screen');
+          } else {
+            // New user — show verification screen
+            document.getElementById('verify-email-display').textContent = currentUser;
+            showScreen('verify-screen');
+            startResendCooldown();
+            setTimeout(() => codeInputs[0].focus(), 300);
+          }
         } else {
           alert(data.error || 'Failed to send code');
         }
