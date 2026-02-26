@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Facts Search - Search Famous Public Documents">
+  <meta name="theme-color" content="#1a365d">
+  <title>Facts Search - Search Famous Public Documents</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #0c1929, #1a365d, #234e82); min-height: 100vh; color: #1e293b; }
+    
+    /* Login Screen */
+    .login-card { background: rgba(255,255,255,0.95); border-radius: 24px; padding: 50px 40px; max-width: 480px; margin: 60px auto; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
+    .logo { width: 100px; height: 100px; background: linear-gradient(135deg, #1a365d, #3182ce); border-radius: 24px; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 50px; }
+    .login-card h1 { color: #1a365d; font-size: 32px; margin-bottom: 10px; }
+    .login-card > p { color: #64748b; margin-bottom: 25px; line-height: 1.5; }
+    .source-icons { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; font-size: 28px; }
+    .form-input { width: 100%; padding: 16px 20px; font-size: 16px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; outline: none; text-align: center; }
+    .form-input:focus { border-color: #3182ce; }
+    .btn-primary { width: 100%; padding: 16px; font-size: 16px; font-weight: 600; background: linear-gradient(135deg, #1a365d, #3182ce); color: white; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(26,54,93,0.3); }
+    .btn-primary:disabled { background: #94a3b8; cursor: wait; transform: none; box-shadow: none; }
+    .login-card small { display: block; margin-top: 25px; color: #94a3b8; }
+    
+    /* Verification Screen */
+    .verify-card { background: rgba(255,255,255,0.95); border-radius: 24px; padding: 50px 40px; max-width: 480px; margin: 60px auto; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
+    .verify-icon { font-size: 60px; margin-bottom: 20px; }
+    .verify-card h2 { color: #1a365d; font-size: 24px; margin-bottom: 10px; }
+    .verify-card .subtitle { color: #64748b; margin-bottom: 8px; font-size: 15px; }
+    .verify-card .email-display { color: #3182ce; font-weight: 600; font-size: 16px; margin-bottom: 25px; }
+    .code-inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; }
+    .code-inputs input { width: 50px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border: 2px solid #e2e8f0; border-radius: 12px; outline: none; color: #1a365d; }
+    .code-inputs input:focus { border-color: #3182ce; background: #eff6ff; }
+    .verify-error { color: #dc2626; font-size: 14px; margin-bottom: 15px; display: none; }
+    .resend-section { margin-top: 20px; }
+    .resend-section p { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+    .btn-link { background: none; border: none; color: #3182ce; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline; }
+    .btn-link:hover { color: #1a365d; }
+    .btn-link:disabled { color: #94a3b8; cursor: wait; text-decoration: none; }
+    .btn-back { background: none; border: none; color: #64748b; font-size: 14px; cursor: pointer; margin-top: 15px; }
+    .btn-back:hover { color: #1a365d; }
+    .timer { color: #64748b; font-size: 13px; margin-top: 8px; }
+    
+    /* Success animation */
+    .verify-success { display: none; text-align: center; }
+    .verify-success .check { font-size: 60px; margin-bottom: 15px; animation: popIn 0.5s ease; }
+    .verify-success h2 { color: #16a34a; margin-bottom: 10px; }
+    .verify-success p { color: #64748b; }
+    @keyframes popIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    
+    /* QR Code Section */
+    .qr-section { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 25px; max-width: 480px; margin: 20px auto; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+    .qr-section h3 { color: white; font-size: 16px; margin-bottom: 5px; }
+    .qr-section p { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 15px; }
+    .qr-code-box { background: white; border-radius: 12px; padding: 15px; display: inline-block; margin-bottom: 15px; }
+    .qr-code-box img { display: block; width: 150px; height: 150px; }
+    .install-steps { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+    .install-step { text-align: center; }
+    .install-step .step-icon { font-size: 28px; margin-bottom: 5px; }
+    .install-step .step-label { color: rgba(255,255,255,0.6); font-size: 11px; }
+
+    /* Ad Banner */
+    .ad-banner { background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-bottom: 1px solid #cbd5e1; padding: 10px 20px; text-align: center; font-size: 13px; color: #64748b; min-height: 90px; display: flex; align-items: center; justify-content: center; }
+    .ad-banner-inner { max-width: 1000px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 15px; }
+    .ad-banner .ad-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; background: rgba(148,163,184,0.15); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+    .ad-banner .ad-content { display: flex; align-items: center; gap: 12px; }
+    .ad-banner .ad-placeholder { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 15px 40px; color: #94a3b8; font-size: 14px; background: rgba(255,255,255,0.6); }
+    .ad-banner a { color: #3182ce; text-decoration: none; font-weight: 600; }
+    .ad-banner a:hover { text-decoration: underline; }
+
+    /* App Screen */
+    .app-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    
+    .app-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+    .header-left { display: flex; align-items: center; gap: 15px; }
+    .header-logo { width: 55px; height: 55px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+    .header-left h1 { color: white; font-size: 26px; }
+    .header-left p { color: rgba(255,255,255,0.6); font-size: 13px; }
+    .user-badge { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; color: rgba(255,255,255,0.8); font-size: 13px; }
+    .verified-badge { color: #4ade80; margin-left: 4px; }
+    
+    /* Sources */
+    .sources-section, .search-section, .results-section { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 25px; margin-bottom: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .sources-section h2, .search-section h2, .results-section h2 { margin-bottom: 20px; color: #1a365d; font-size: 18px; }
+    .sources-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+    .source-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .source-card:hover { border-color: #3182ce; background: #eff6ff; }
+    .source-card.active { border-color: #1a365d; background: linear-gradient(135deg, #eff6ff, #dbeafe); }
+    .source-icon { font-size: 32px; display: block; margin-bottom: 8px; }
+    .source-card h3 { font-size: 13px; color: #1a365d; margin-bottom: 4px; }
+    .source-card p { font-size: 11px; color: #64748b; }
+    
+    /* Search */
+    .search-box { display: flex; gap: 12px; flex-wrap: wrap; }
+    .search-box input { flex: 1; min-width: 200px; padding: 14px 20px; font-size: 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
+    .search-box input:focus { border-color: #3182ce; }
+    .search-box button { padding: 14px 28px; font-size: 15px; font-weight: 600; background: linear-gradient(135deg, #1a365d, #3182ce); color: white; border: none; border-radius: 10px; cursor: pointer; }
+    .search-box button:hover { transform: translateY(-2px); }
+    .search-box button:disabled { background: #94a3b8; cursor: wait; }
+    .hint { margin-top: 12px; font-size: 13px; color: #64748b; }
+    
+    /* Results */
+    .results-list { display: flex; flex-direction: column; gap: 12px; }
+    .result-item { background: #f8fafc; border-radius: 10px; padding: 18px; border-left: 4px solid #3182ce; }
+    .result-item h4 { color: #1a365d; margin-bottom: 8px; font-size: 15px; }
+    .result-item p { font-size: 14px; line-height: 1.6; color: #1e293b; }
+    .result-item a { color: #3182ce; text-decoration: none; font-weight: 600; }
+    .result-item a:hover { text-decoration: underline; }
+    .result-item .meta { font-size: 12px; color: #64748b; margin-top: 8px; }
+    
+    /* Loading & Error */
+    .loading { text-align: center; padding: 60px; color: white; }
+    .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-card { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 40px; text-align: center; }
+    .error-icon { font-size: 60px; margin-bottom: 15px; }
+    .error-card h3 { color: #dc2626; margin-bottom: 10px; }
+    
+    /* Footer */
+    .app-footer { text-align: center; padding: 30px 20px; color: rgba(255,255,255,0.5); font-size: 13px; }
+    .app-footer strong { color: rgba(255,255,255,0.7); }
+    
+    .spinner-small { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 8px; }
+    
+    @media (max-width: 768px) {
+      .login-card, .verify-card { padding: 35px 25px; margin: 30px 15px; }
+      .sources-grid { grid-template-columns: repeat(2, 1fr); }
+      .search-box { flex-direction: column; }
+      .code-inputs input { width: 44px; height: 52px; font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Ad Banner - Always Visible -->
+  <div class="ad-banner" id="ad-banner">
+    <div class="ad-banner-inner">
+      <span class="ad-label">Ad</span>
+      <div class="ad-content">
+        <div class="ad-placeholder" id="ad-slot">
+          📢 Your Ad Here — <a href="mailto:contact@officesoftsolutions.com">Advertise with Us</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen active">
+      <div class="login-card">
+        <div class="logo">🔍</div>
+        <h1>Facts Search</h1>
+        <p>Search Famous Public Documents<br>in Any Language</p>
+        <div class="source-icons">
+          <span>🌍</span><span>📜</span><span>🕊️</span><span>📊</span><span>📚</span>
+        </div>
+        <form id="login-form">
+          <input type="email" id="email-input" class="form-input" placeholder="Enter your email to continue" required>
+          <button type="submit" id="login-btn" class="btn-primary">Send Verification Code →</button>
+        </form>
+        <small>🔒 We'll send a 6-digit code to verify your email.</small>
+      </div>
+
+      <!-- QR Code for Mobile Install -->
+      <div class="qr-section">
+        <h3>📱 Install on Your Phone</h3>
+        <p>Scan the QR code to open on your mobile device</p>
+        <div class="qr-code-box">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://facts-search-production.up.railway.app" alt="QR Code - Facts Search">
+        </div>
+        <div class="install-steps">
+          <div class="install-step">
+            <div class="step-icon">📷</div>
+            <div class="step-label">Scan QR Code</div>
+          </div>
+          <div class="install-step">
+            <div class="step-icon">🍎</div>
+            <div class="step-label">iOS: Tap Share → Add to Home</div>
+          </div>
+          <div class="install-step">
+            <div class="step-icon">🤖</div>
+            <div class="step-label">Android: Tap Menu → Install App</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verification Screen -->
+    <div id="verify-screen" class="screen">
+      <div class="verify-card">
+        <div id="verify-form-section">
+          <div class="verify-icon">📧</div>
+          <h2>Check Your Email</h2>
+          <p class="subtitle">We sent a 6-digit code to</p>
+          <p class="email-display" id="verify-email-display">user@email.com</p>
+          
+          <div class="code-inputs" id="code-inputs">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+          </div>
+          
+          <p class="verify-error" id="verify-error">Invalid code. Please try again.</p>
+          
+          <button id="verify-btn" class="btn-primary">Verify Email ✓</button>
+          
+          <div class="resend-section">
+            <p>Didn't receive the code?</p>
+            <button id="resend-btn" class="btn-link">Resend Code</button>
+            <p class="timer" id="resend-timer"></p>
+          </div>
+          
+          <button id="back-btn" class="btn-back">← Use a different email</button>
+        </div>
+        
+        <div class="verify-success" id="verify-success">
+          <div class="check">✅</div>
+          <h2>Email Verified!</h2>
+          <p>Redirecting to Facts Search...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- App Screen -->
+    <div id="app-screen" class="screen">
+      <header class="app-header">
+        <div class="header-left">
+          <div class="header-logo">🔍</div>
+          <div>
+            <h1>Facts Search</h1>
+            <p>Search Famous Public Documents</p>
+          </div>
+        </div>
+        <span class="user-badge" id="user-email">👤 user@email.com <span class="verified-badge">✓</span></span>
+      </header>
+
+      <section class="sources-section">
+        <h2>📂 Select Document Source</h2>
+        <div class="sources-grid" id="sources-grid">
+          <div class="source-card active" data-source="cia-factbook">
+            <span class="source-icon">🌍</span>
+            <h3>CIA World Factbook</h3>
+            <p>Country information</p>
+          </div>
+          <div class="source-card" data-source="us-constitution">
+            <span class="source-icon">📜</span>
+            <h3>US Constitution</h3>
+            <p>Articles & Amendments</p>
+          </div>
+          <div class="source-card" data-source="declaration">
+            <span class="source-icon">🗽</span>
+            <h3>Declaration of Independence</h3>
+            <p>Founding document</p>
+          </div>
+          <div class="source-card" data-source="un-rights">
+            <span class="source-icon">🕊️</span>
+            <h3>UN Human Rights</h3>
+            <p>30 Articles</p>
+          </div>
+          <div class="source-card" data-source="world-bank">
+            <span class="source-icon">📊</span>
+            <h3>World Bank Data</h3>
+            <p>Economic indicators</p>
+          </div>
+          <div class="source-card" data-source="gutenberg">
+            <span class="source-icon">📚</span>
+            <h3>Project Gutenberg</h3>
+            <p>70,000+ books</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="search-section">
+        <h2 id="search-title">🔍 Search CIA World Factbook</h2>
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Enter country name (e.g., Pakistan, Germany)">
+          <button id="search-btn">🔍 Search</button>
+        </div>
+        <p class="hint" id="search-hint">💡 Enter full country name — opens CIA Factbook page directly</p>
+      </section>
+
+      <div class="loading" id="loading" style="display:none;">
+        <div class="spinner"></div>
+        <p>Searching...</p>
+      </div>
+
+      <section class="results-section" id="results-section" style="display:none;">
+        <h2 id="results-title">📄 Results</h2>
+        <div class="results-list" id="results-content"></div>
+      </section>
+
+      <section id="error-section" style="display:none;">
+        <div class="error-card">
+          <span class="error-icon">😕</span>
+          <h3 id="error-title">Not Found</h3>
+          <p id="error-message">Please try a different search.</p>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <footer class="app-footer">
+    <p>Built by <strong>Office Soft Solutions</strong></p>
+  </footer>
+
+  <script>
+    const API_BASE = '';
+    let currentUser = null;
+    let currentSource = 'cia-factbook';
+    let resendCooldown = 0;
+    let resendTimer = null;
+
+    const SOURCES = {
+      'cia-factbook': { title: '🔍 Search CIA World Factbook', placeholder: 'Enter country name (e.g., Pakistan, Germany)', hint: '💡 Enter full country name — opens CIA Factbook page directly' },
+      'us-constitution': { title: '🔍 Search US Constitution', placeholder: 'Search amendments (e.g., "freedom")', hint: '💡 Try: preamble, 1, 2, speech, arms' },
+      'declaration': { title: '🔍 Declaration of Independence', placeholder: 'Click search to view', hint: '💡 Click Search to view full document' },
+      'un-rights': { title: '🔍 Search UN Human Rights', placeholder: 'Search articles (e.g., "freedom")', hint: '💡 Try: 1, freedom, education, or "all"' },
+      'world-bank': { title: '🔍 Search World Bank Data', placeholder: 'Enter country code (e.g., USA)', hint: '💡 Use codes: USA, GBR, IND, CHN' },
+      'gutenberg': { title: '🔍 Search Project Gutenberg', placeholder: 'Search books by title or author', hint: '💡 Try: Shakespeare, Dickens' }
+    };
+
+    // ==================== CODE INPUT HANDLING ====================
+    const codeInputs = document.querySelectorAll('#code-inputs input');
+    
+    codeInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const val = e.target.value.replace(/[^0-9]/g, '');
+        e.target.value = val;
+        if (val && index < codeInputs.length - 1) {
+          codeInputs[index + 1].focus();
+        }
+        if (getCode().length === 6) {
+          verifyCode();
+        }
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+          codeInputs[index - 1].focus();
+        }
+      });
+      
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+        if (pasted.length >= 6) {
+          for (let i = 0; i < 6; i++) {
+            codeInputs[i].value = pasted[i] || '';
+          }
+          codeInputs[5].focus();
+          setTimeout(() => verifyCode(), 100);
+        }
+      });
+    });
+
+    function getCode() {
+      return Array.from(codeInputs).map(i => i.value).join('');
+    }
+
+    function clearCode() {
+      codeInputs.forEach(i => i.value = '');
+      codeInputs[0].focus();
+    }
+
+    // ==================== SCREEN NAVIGATION ====================
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    // ==================== LOGIN ====================
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      const btn = document.getElementById('login-btn');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-small"></span> Sending code...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          currentUser = data.email;
+          document.getElementById('verify-email-display').textContent = currentUser;
+          showScreen('verify-screen');
+          startResendCooldown();
+          setTimeout(() => codeInputs[0].focus(), 300);
+        } else {
+          alert(data.error || 'Failed to send code');
+        }
+      } catch (err) {
+        alert('Connection error. Please try again.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send Verification Code →';
+      }
+    });
+
+    // ==================== VERIFY ====================
+    document.getElementById('verify-btn').addEventListener('click', verifyCode);
+
+    async function verifyCode() {
+      const code = getCode();
+      if (code.length !== 6) return;
+
+      const btn = document.getElementById('verify-btn');
+      const errorEl = document.getElementById('verify-error');
+      errorEl.style.display = 'none';
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-small"></span> Verifying...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: currentUser, code })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById('verify-form-section').style.display = 'none';
+          document.getElementById('verify-success').style.display = 'block';
+          
+          setTimeout(() => {
+            document.getElementById('user-email').innerHTML = '👤 ' + currentUser + ' <span class="verified-badge">✓</span>';
+            showScreen('app-screen');
+          }, 1500);
+        } else {
+          errorEl.textContent = data.error || 'Invalid code';
+          errorEl.style.display = 'block';
+          clearCode();
+        }
+      } catch (err) {
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verify Email ✓';
+      }
+    }
+
+    // ==================== RESEND CODE ====================
+    document.getElementById('resend-btn').addEventListener('click', async () => {
+      if (resendCooldown > 0) return;
+
+      const btn = document.getElementById('resend-btn');
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/resend-code`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: currentUser })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          btn.textContent = 'Code Sent! ✓';
+          clearCode();
+          document.getElementById('verify-error').style.display = 'none';
+          startResendCooldown();
+          setTimeout(() => { btn.textContent = 'Resend Code'; }, 2000);
+        } else {
+          btn.textContent = 'Failed — Try Again';
+          setTimeout(() => { btn.textContent = 'Resend Code'; btn.disabled = false; }, 2000);
+        }
+      } catch (err) {
+        btn.textContent = 'Error — Try Again';
+        setTimeout(() => { btn.textContent = 'Resend Code'; btn.disabled = false; }, 2000);
+      }
+    });
+
+    function startResendCooldown() {
+      resendCooldown = 60;
+      const btn = document.getElementById('resend-btn');
+      const timerEl = document.getElementById('resend-timer');
+      btn.disabled = true;
+
+      if (resendTimer) clearInterval(resendTimer);
+      resendTimer = setInterval(() => {
+        resendCooldown--;
+        if (resendCooldown <= 0) {
+          clearInterval(resendTimer);
+          timerEl.textContent = '';
+          btn.disabled = false;
+        } else {
+          timerEl.textContent = `Resend available in ${resendCooldown}s`;
+        }
+      }, 1000);
+    }
+
+    // ==================== BACK BUTTON ====================
+    document.getElementById('back-btn').addEventListener('click', () => {
+      document.getElementById('verify-form-section').style.display = 'block';
+      document.getElementById('verify-success').style.display = 'none';
+      document.getElementById('verify-error').style.display = 'none';
+      clearCode();
+      if (resendTimer) clearInterval(resendTimer);
+      showScreen('login-screen');
+    });
+
+    // ==================== SOURCE SELECTION ====================
+    document.querySelectorAll('.source-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.source-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        currentSource = card.dataset.source;
+        const s = SOURCES[currentSource];
+        document.getElementById('search-title').textContent = s.title;
+        document.getElementById('search-input').placeholder = s.placeholder;
+        document.getElementById('search-hint').textContent = s.hint;
+        document.getElementById('search-input').value = '';
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('error-section').style.display = 'none';
+      });
+    });
+
+    // ==================== SEARCH ====================
+    document.getElementById('search-btn').addEventListener('click', performSearch);
+    document.getElementById('search-input').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performSearch();
+    });
+
+    async function performSearch() {
+      const query = document.getElementById('search-input').value.trim();
+
+      if (currentSource === 'cia-factbook') {
+        if (!query) {
+          showError('Enter a country name', 'Please type a country name like "Pakistan" or "Germany".');
+          return;
+        }
+        const countrySlug = query.toLowerCase().replace(/\s+/g, '-');
+        const ciaUrl = `https://www.cia.gov/the-world-factbook/countries/${countrySlug}/`;
+        window.open(ciaUrl, '_blank');
+        return;
+      }
+
+      const searchQuery = query || 'all';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('results-section').style.display = 'none';
+      document.getElementById('error-section').style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/search/${currentSource}?query=${encodeURIComponent(searchQuery)}`);
+        const data = await res.json();
+        document.getElementById('loading').style.display = 'none';
+
+        if (data.success) {
+          displayResults(data.data);
+        } else {
+          showError(data.error || 'Not found', data.suggestion || 'Try a different search.');
+        }
+      } catch (err) {
+        document.getElementById('loading').style.display = 'none';
+        showError('Connection Error', 'Please check your connection.');
+      }
+    }
+
+    function displayResults(data) {
+      const container = document.getElementById('results-content');
+      container.innerHTML = '';
+
+      if (data.matches && data.matches.length > 0) {
+        data.matches.forEach(m => {
+          container.innerHTML += `<div class="result-item"><h4>${m.type || 'Result'}${m.title ? ': ' + m.title : ''}</h4><p>${m.content}</p>${m.year ? '<div class="meta">Year: ' + m.year + '</div>' : ''}</div>`;
+        });
+      } else if (data.all_articles) {
+        for (const [num, text] of Object.entries(data.all_articles)) {
+          container.innerHTML += `<div class="result-item"><h4>Article ${num}</h4><p>${text}</p></div>`;
+        }
+      } else if (data.books) {
+        data.books.forEach(b => {
+          container.innerHTML += `<div class="result-item"><h4>${b.title}</h4><p>by ${b.authors || 'Unknown'}</p><p><a href="${b.url}" target="_blank">Read Online →</a></p></div>`;
+        });
+      } else {
+        for (const [key, value] of Object.entries(data)) {
+          if (key !== 'source' && value) {
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            if (typeof value === 'string' && value.startsWith('http')) {
+              container.innerHTML += `<div class="result-item"><h4>${label}</h4><p><a href="${value}" target="_blank">Open Source →</a></p></div>`;
+            } else {
+              container.innerHTML += `<div class="result-item"><h4>${label}</h4><p>${Array.isArray(value) ? value.join(', ') : value}</p></div>`;
+            }
+          }
+        }
+      }
+
+      document.getElementById('results-title').textContent = '📄 ' + (data.source || 'Results');
+      document.getElementById('results-section').style.display = 'block';
+    }
+
+    function showError(title, message) {
+      document.getElementById('error-title').textContent = title;
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-section').style.display = 'block';
+    }
+  </script>
+</body>
+</html>
