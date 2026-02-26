@@ -1,578 +1,2885 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Facts Search - Search Famous Public Documents">
-  <meta name="theme-color" content="#1a365d">
-  <title>Facts Search - Search Famous Public Documents</title>
-  <link rel="manifest" href="manifest.json">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #0c1929, #1a365d, #234e82); min-height: 100vh; color: #1e293b; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ALL STAGES COMPLETE DASHBOARD - Current & History</title>
     
-    /* Login Screen */
-    .login-card { background: rgba(255,255,255,0.95); border-radius: 24px; padding: 50px 40px; max-width: 480px; margin: 60px auto; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
-    .logo { width: 100px; height: 100px; background: linear-gradient(135deg, #1a365d, #3182ce); border-radius: 24px; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 50px; }
-    .login-card h1 { color: #1a365d; font-size: 32px; margin-bottom: 10px; }
-    .login-card > p { color: #64748b; margin-bottom: 25px; line-height: 1.5; }
-    .source-icons { display: flex; justify-content: center; gap: 15px; margin-bottom: 30px; font-size: 28px; }
-    .form-input { width: 100%; padding: 16px 20px; font-size: 16px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 15px; outline: none; text-align: center; }
-    .form-input:focus { border-color: #3182ce; }
-    .btn-primary { width: 100%; padding: 16px; font-size: 16px; font-weight: 600; background: linear-gradient(135deg, #1a365d, #3182ce); color: white; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(26,54,93,0.3); }
-    .btn-primary:disabled { background: #94a3b8; cursor: wait; transform: none; box-shadow: none; }
-    .login-card small { display: block; margin-top: 25px; color: #94a3b8; }
+    <!-- SheetJS for Excel export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     
-    /* Verification Screen */
-    .verify-card { background: rgba(255,255,255,0.95); border-radius: 24px; padding: 50px 40px; max-width: 480px; margin: 60px auto; text-align: center; box-shadow: 0 25px 80px rgba(0,0,0,0.4); }
-    .verify-icon { font-size: 60px; margin-bottom: 20px; }
-    .verify-card h2 { color: #1a365d; font-size: 24px; margin-bottom: 10px; }
-    .verify-card .subtitle { color: #64748b; margin-bottom: 8px; font-size: 15px; }
-    .verify-card .email-display { color: #3182ce; font-weight: 600; font-size: 16px; margin-bottom: 25px; }
-    .code-inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 25px; }
-    .code-inputs input { width: 50px; height: 60px; text-align: center; font-size: 24px; font-weight: bold; border: 2px solid #e2e8f0; border-radius: 12px; outline: none; color: #1a365d; }
-    .code-inputs input:focus { border-color: #3182ce; background: #eff6ff; }
-    .verify-error { color: #dc2626; font-size: 14px; margin-bottom: 15px; display: none; }
-    .resend-section { margin-top: 20px; }
-    .resend-section p { color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
-    .btn-link { background: none; border: none; color: #3182ce; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: underline; }
-    .btn-link:hover { color: #1a365d; }
-    .btn-link:disabled { color: #94a3b8; cursor: wait; text-decoration: none; }
-    .btn-back { background: none; border: none; color: #64748b; font-size: 14px; cursor: pointer; margin-top: 15px; }
-    .btn-back:hover { color: #1a365d; }
-    .timer { color: #64748b; font-size: 13px; margin-top: 8px; }
+    <!-- Chart.js for price charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    /* Success animation */
-    .verify-success { display: none; text-align: center; }
-    .verify-success .check { font-size: 60px; margin-bottom: 15px; animation: popIn 0.5s ease; }
-    .verify-success h2 { color: #16a34a; margin-bottom: 10px; }
-    .verify-success p { color: #64748b; }
-    @keyframes popIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+    <!-- ═══════════════════════════════════════════════════════════════════════════════
+         API CONFIGURATION - CHANGE THIS TO YOUR NGROK URL
+         ═══════════════════════════════════════════════════════════════════════════════ -->
+    <script>
+        // ⚠️ PASTE YOUR NGROK URL HERE (without trailing slash)
+        // Example: 'https://abc123.ngrok-free.app'
+        // Leave empty string '' to use same server (localhost)
+        let API_BASE_URL = localStorage.getItem('apiBaseUrl') || '';
+        
+        // Helper function to build API URLs
+        function apiUrl(endpoint) {
+            if (API_BASE_URL) {
+                return API_BASE_URL + endpoint;
+            }
+            return endpoint; // Use relative URL if no base set
+        }
+        
+        // Custom fetch that bypasses ngrok interstitial page
+        async function apiFetch(endpoint) {
+            const url = apiUrl(endpoint);
+            const response = await fetch(url, {
+                headers: {
+                    'ngrok-skip-browser-warning': 'true',
+                    'Accept': 'application/json'
+                }
+            });
+            return response;
+        }
+        
+        // Save API URL to localStorage
+        function saveApiUrl(url) {
+            url = url.trim().replace(/\/$/, ''); // Remove trailing slash
+            API_BASE_URL = url;
+            localStorage.setItem('apiBaseUrl', url);
+            console.log('API URL saved:', url || '(using relative URLs)');
+        }
+        
+        // Show/hide settings panel
+        function toggleSettings() {
+            const panel = document.getElementById('settings-panel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // Apply new API URL and refresh
+        function applyApiUrl() {
+            const input = document.getElementById('api-url-input');
+            saveApiUrl(input.value);
+            toggleSettings();
+            location.reload();
+        }
+    </script>
     
-    /* Ad Banner */
-    .ad-banner { background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-bottom: 1px solid #cbd5e1; padding: 10px 20px; text-align: center; font-size: 13px; color: #64748b; min-height: 90px; display: flex; align-items: center; justify-content: center; }
-    .ad-banner-inner { max-width: 1000px; width: 100%; display: flex; align-items: center; justify-content: center; gap: 15px; }
-    .ad-banner .ad-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; background: rgba(148,163,184,0.15); padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
-    .ad-banner .ad-content { display: flex; align-items: center; gap: 12px; }
-    .ad-banner .ad-placeholder { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 15px 40px; color: #94a3b8; font-size: 14px; background: rgba(255,255,255,0.6); }
-    .ad-banner a { color: #3182ce; text-decoration: none; font-weight: 600; }
-    .ad-banner a:hover { text-decoration: underline; }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    /* App Screen */
-    .app-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-    .screen { display: none; }
-    .screen.active { display: block; }
-    
-    .app-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-    .header-left { display: flex; align-items: center; gap: 15px; }
-    .header-logo { width: 55px; height: 55px; background: rgba(255,255,255,0.15); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
-    .header-left h1 { color: white; font-size: 26px; }
-    .header-left p { color: rgba(255,255,255,0.6); font-size: 13px; }
-    .user-badge { background: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; color: rgba(255,255,255,0.8); font-size: 13px; }
-    .verified-badge { color: #4ade80; margin-left: 4px; }
-    
-    /* Sources */
-    .sources-section, .search-section, .results-section { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 25px; margin-bottom: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
-    .sources-section h2, .search-section h2, .results-section h2 { margin-bottom: 20px; color: #1a365d; font-size: 18px; }
-    .sources-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
-    .source-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 18px 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .source-card:hover { border-color: #3182ce; background: #eff6ff; }
-    .source-card.active { border-color: #1a365d; background: linear-gradient(135deg, #eff6ff, #dbeafe); }
-    .source-icon { font-size: 32px; display: block; margin-bottom: 8px; }
-    .source-card h3 { font-size: 13px; color: #1a365d; margin-bottom: 4px; }
-    .source-card p { font-size: 11px; color: #64748b; }
-    
-    /* Search */
-    .search-box { display: flex; gap: 12px; flex-wrap: wrap; }
-    .search-box input { flex: 1; min-width: 200px; padding: 14px 20px; font-size: 15px; border: 2px solid #e2e8f0; border-radius: 10px; outline: none; }
-    .search-box input:focus { border-color: #3182ce; }
-    .search-box button { padding: 14px 28px; font-size: 15px; font-weight: 600; background: linear-gradient(135deg, #1a365d, #3182ce); color: white; border: none; border-radius: 10px; cursor: pointer; }
-    .search-box button:hover { transform: translateY(-2px); }
-    .search-box button:disabled { background: #94a3b8; cursor: wait; }
-    .hint { margin-top: 12px; font-size: 13px; color: #64748b; }
-    
-    /* Results */
-    .results-list { display: flex; flex-direction: column; gap: 12px; }
-    .result-item { background: #f8fafc; border-radius: 10px; padding: 18px; border-left: 4px solid #3182ce; }
-    .result-item h4 { color: #1a365d; margin-bottom: 8px; font-size: 15px; }
-    .result-item p { font-size: 14px; line-height: 1.6; color: #1e293b; }
-    .result-item a { color: #3182ce; text-decoration: none; font-weight: 600; }
-    .result-item a:hover { text-decoration: underline; }
-    .result-item .meta { font-size: 12px; color: #64748b; margin-top: 8px; }
-    
-    /* Loading & Error */
-    .loading { text-align: center; padding: 60px; color: white; }
-    .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .error-card { background: rgba(255,255,255,0.95); border-radius: 16px; padding: 40px; text-align: center; }
-    .error-icon { font-size: 60px; margin-bottom: 15px; }
-    .error-card h3 { color: #dc2626; margin-bottom: 10px; }
-    
-    /* Footer */
-    .app-footer { text-align: center; padding: 30px 20px; color: rgba(255,255,255,0.5); font-size: 13px; }
-    .app-footer strong { color: rgba(255,255,255,0.7); }
-    
-    .spinner-small { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; display: inline-block; animation: spin 1s linear infinite; vertical-align: middle; margin-right: 8px; }
-    
-    @media (max-width: 768px) {
-      .login-card, .verify-card { padding: 35px 25px; margin: 30px 15px; }
-      .sources-grid { grid-template-columns: repeat(2, 1fr); }
-      .search-box { flex-direction: column; }
-      .code-inputs input { width: 44px; height: 52px; font-size: 20px; }
-    }
-  </style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e27;
+            color: #e2e8f0;
+            font-size: 54px;
+        }
+
+        .dashboard-container {
+            width: 100vw;
+            min-height: 100vh;
+        }
+
+        /* SETTINGS PANEL */
+        .settings-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            font-size: 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .settings-btn:hover {
+            background: #6d28d9;
+        }
+        .settings-panel {
+            display: none;
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 9998;
+            background: #1e293b;
+            border: 2px solid #7c3aed;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            width: 500px;
+        }
+        .settings-panel h3 {
+            color: #e2e8f0;
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+        .settings-panel input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            margin-bottom: 15px;
+        }
+        .settings-panel .btn-row {
+            display: flex;
+            gap: 10px;
+        }
+        .settings-panel button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .settings-panel .btn-save {
+            background: #22c55e;
+            color: white;
+        }
+        .settings-panel .btn-cancel {
+            background: #64748b;
+            color: white;
+        }
+        .settings-panel .status {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-top: 15px;
+        }
+        .settings-panel .status.connected {
+            color: #22c55e;
+        }
+        .settings-panel .status.error {
+            color: #ef4444;
+        }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 50%, #db2777 100%);
+            padding: 40px 60px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 144px;
+            font-weight: 800;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        /* TABS */
+        .tabs-container {
+            background: #1e293b;
+            border-bottom: 3px solid #334155;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            padding: 0 60px;
+        }
+
+        .tab-button {
+            padding: 25px 60px;
+            font-size: 72px;
+            font-weight: 700;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 5px solid transparent;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tab-button:hover {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-button.active {
+            color: white;
+            border-bottom-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* SUMMARY SECTION */
+        .summary-section {
+            background: #1e293b;
+            padding: 40px 60px;
+            border-bottom: 3px solid #334155;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #475569;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+            border-color: #7c3aed;
+        }
+
+        .summary-label {
+            font-size: 54px;
+            color: #94a3b8;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .summary-value {
+            font-size: 126px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .summary-value.success { color: #10b981; }
+        .summary-value.warning { color: #fbbf24; }
+        .summary-value.danger { color: #ef4444; }
+        .summary-value.info { color: #60a5fa; }
+
+        .summary-sub {
+            font-size: 144px;
+            color: #94a3b8;
+        }
+
+        /* DISTRIBUTION SECTION */
+        .distribution-section {
+            background: #0f172a;
+            padding: 40px 60px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .distribution-title {
+            font-size: 96px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .distribution-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .bar-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .bar-label {
+            font-size: 60px;
+            font-weight: 600;
+            min-width: 200px;
+            color: #e2e8f0;
+        }
+
+        .bar-container {
+            flex: 1;
+            background: #1e293b;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 50px;
+            position: relative;
+            border: 2px solid #334155;
+        }
+
+        .bar-fill {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 15px;
+            font-size: 54px;
+            font-weight: 700;
+            color: white;
+            transition: width 1s ease-out;
+        }
+
+        .bar-fill.excellent { background: linear-gradient(90deg, #10b981 0%, #059669 100%); }
+        .bar-fill.good { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); }
+        .bar-fill.moderate { background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); }
+        .bar-fill.slight { background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%); }
+        .bar-fill.loss { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
+
+        .bar-info {
+            font-size: 54px;
+            min-width: 150px;
+            text-align: right;
+            color: #94a3b8;
+        }
+
+        /* CONTROLS */
+        .controls-section {
+            background: #1e293b;
+            padding: 30px 60px;
+            border-bottom: 2px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            font-size: 54px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .search-input, .filter-select {
+            padding: 15px 25px;
+            font-size: 54px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: #0f172a;
+            color: #e2e8f0;
+            transition: all 0.3s;
+        }
+
+        .search-input { width: 300px; }
+        .filter-select { width: 200px; }
+
+        .search-input:focus, .filter-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        /* TABLE */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background: #0f172a;
+            padding: 0 60px 60px 60px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 60px;
+            background: #1e293b;
+            margin-top: 20px;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #1e3a8a 0%, #7c3aed 100%);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            padding: 25px 20px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 66px;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        th:hover { background: rgba(255, 255, 255, 0.1); }
+
+        .sort-indicator {
+            margin-left: 8px;
+            font-size: 54px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #334155;
+            transition: all 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #2d3748;
+            transform: scale(1.005);
+        }
+
+        td {
+            padding: 20px;
+            font-size: 60px;
+            color: #e2e8f0;
+        }
+
+        .rank-cell {
+            font-weight: 700;
+            font-size: 72px;
+            text-align: center;
+        }
+
+        .rank-1 { color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        .rank-2 { color: #c0c0c0; text-shadow: 0 0 10px rgba(192, 192, 192, 0.5); }
+        .rank-3 { color: #cd7f32; text-shadow: 0 0 10px rgba(205, 127, 50, 0.5); }
+
+        .symbol-cell {
+            font-weight: 700;
+            font-size: 72px;
+            color: #60a5fa;
+        }
+
+        .gain-excellent { color: #10b981; font-weight: 700; }
+        .gain-good { color: #3b82f6; font-weight: 700; }
+        .gain-moderate { color: #fbbf24; font-weight: 600; }
+        .gain-slight { color: #94a3b8; font-weight: 600; }
+        .gain-loss { color: #ef4444; font-weight: 700; }
+
+        .category-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 126px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .category-excellent { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .category-good { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        .category-moderate { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; }
+        .category-slight { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); color: white; }
+        .category-loss { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; }
+
+        .status-active { color: #10b981; font-weight: 600; }
+        .status-inactive { color: #ef4444; font-weight: 600; }
+
+        .strategies-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 60px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            min-width: 50px;
+        }
+
+        .pattern-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 144px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            font-size: 72px;
+            color: #94a3b8;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            position: fixed;
+            top: 120px;
+            right: 40px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            font-size: 54px;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px;
+            font-size: 72px;
+            color: #94a3b8;
+        }
+
+        .info-text {
+            text-align: center;
+            padding: 20px 60px;
+            font-size: 60px;
+            color: #94a3b8;
+            background: #1e293b;
+        }
+
+        /* MODAL STYLES */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 3px solid #334155;
+            border-radius: 30px;
+            max-width: 98%;
+            width: 100%;
+            max-height: 95vh;
+            overflow-y: auto;
+            box-shadow: 0 75px 150px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            padding: 60px;
+            border-radius: 27px 27px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 96px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 96px;
+            width: 120px;
+            height: 120px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+
+        .modal-body {
+            padding: 60px;
+        }
+
+        .history-detail-section {
+            background: #1e293b;
+            padding: 45px;
+            border-radius: 24px;
+            margin-bottom: 45px;
+            border: 2px solid #334155;
+        }
+
+        .history-detail-title {
+            font-size: 72px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .history-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .history-stat-item {
+            background: #0f172a;
+            padding: 36px;
+            border-radius: 18px;
+            border: 2px solid #334155;
+        }
+
+        .history-stat-label {
+            font-size: 48px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+
+        .history-stat-value {
+            font-size: 66px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .symbol-cell {
+            cursor: pointer;
+            color: #3b82f6;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .symbol-cell:hover {
+            color: #60a5fa;
+            text-decoration: underline;
+            transform: scale(1.05);
+        }
+
+        .history-loading {
+            text-align: center;
+            padding: 90px;
+            font-size: 60px;
+            color: #94a3b8;
+        }
+
+        /* MODAL TABS */
+        .modal-tabs {
+            display: flex;
+            background: #0f172a;
+            border-bottom: 3px solid #334155;
+            gap: 5px;
+        }
+
+        .modal-tab-button {
+            flex: 1;
+            padding: 30px;
+            font-size: 60px;
+            font-weight: 700;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 5px solid transparent;
+        }
+
+        .modal-tab-button:hover {
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .modal-tab-button.active {
+            color: white;
+            border-bottom-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.2);
+        }
+
+        .modal-tab-content {
+            display: none;
+            padding: 60px;
+        }
+
+        .modal-tab-content.active {
+            display: block;
+        }
+
+        .news-item {
+            background: #0f172a;
+            padding: 36px;
+            border-radius: 18px;
+            border: 2px solid #334155;
+            margin-bottom: 30px;
+        }
+
+        .news-title {
+            font-size: 54px;
+            font-weight: bold;
+            color: #3b82f6;
+            margin-bottom: 15px;
+        }
+
+        .news-date {
+            font-size: 42px;
+            color: #94a3b8;
+            margin-bottom: 15px;
+        }
+
+        .news-summary {
+            font-size: 48px;
+            color: #e2e8f0;
+            line-height: 1.6;
+        }
+
+        .chart-container {
+            background: #0f172a;
+            padding: 45px;
+            border-radius: 24px;
+            border: 2px solid #334155;
+            min-height: 900px;
+        }
+    </style>
 </head>
 <body>
-  <!-- Ad Banner - Always Visible -->
-  <div class="ad-banner" id="ad-banner">
-    <div class="ad-banner-inner">
-      <span class="ad-label">Ad</span>
-      <div class="ad-content">
-        <div class="ad-placeholder" id="ad-slot">
-          📢 Your Ad Here — <a href="mailto:contact@officesoftsolutions.com">Advertise with Us</a>
+    <!-- SETTINGS BUTTON & PANEL -->
+    <button class="settings-btn" onclick="toggleSettings()">⚙️ API Settings</button>
+    <div id="settings-panel" class="settings-panel">
+        <h3>🔌 API Server Connection</h3>
+        <p style="font-size: 16px; color: #94a3b8; margin-bottom: 15px;">
+            Paste your ngrok URL below (e.g., https://abc123.ngrok-free.app)
+        </p>
+        <input type="text" id="api-url-input" placeholder="https://your-ngrok-url.ngrok-free.app" />
+        <div class="btn-row">
+            <button class="btn-save" onclick="applyApiUrl()">💾 Save & Reload</button>
+            <button class="btn-cancel" onclick="toggleSettings()">Cancel</button>
         </div>
-      </div>
+        <div id="connection-status" class="status">
+            Current: <span id="current-api-url">Loading...</span>
+        </div>
     </div>
-  </div>
+    <script>
+        // Initialize settings panel with current URL
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('api-url-input').value = API_BASE_URL;
+            document.getElementById('current-api-url').textContent = API_BASE_URL || '(Same server - localhost)';
+        });
+    </script>
 
-  <div class="app-container">
-    <!-- Login Screen -->
-    <div id="login-screen" class="screen active">
-      <div class="login-card">
-        <div class="logo">🔍</div>
-        <h1>Facts Search</h1>
-        <p>Search Famous Public Documents<br>in Any Language</p>
-        <div class="source-icons">
-          <span>🌍</span><span>📜</span><span>🕊️</span><span>📊</span><span>📚</span>
+    <div class="dashboard-container">
+        <!-- HEADER -->
+        <div class="header">
+            <h1>🎯 ALL STAGES COMPLETE DASHBOARD</h1>
         </div>
-        <form id="login-form">
-          <input type="email" id="email-input" class="form-input" placeholder="Enter your email to continue" required>
-          <button type="submit" id="login-btn" class="btn-primary">Send Verification Code →</button>
-        </form>
-        <small>🔒 We'll send a 6-digit code to verify your email.</small>
-      </div>
+
+        <!-- STAGE SELECTOR TABS -->
+        <div class="stage-selector" style="background: #0f172a; padding: 20px 60px; display: flex; gap: 20px; justify-content: center; border-bottom: 3px solid #334155;">
+            <button class="stage-btn active" onclick="selectStage(1)" id="stage-btn-1" style="padding: 25px 50px; font-size: 60px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; background: #3b82f6; color: white;">
+                📈 STAGE 1<br><span id="stage1-count">0</span>
+            </button>
+            <button class="stage-btn" onclick="selectStage(2)" id="stage-btn-2" style="padding: 25px 50px; font-size: 60px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; background: #1e293b; color: #94a3b8;">
+                🚀 STAGE 2<br><span id="stage2-count">0</span>
+            </button>
+            <button class="stage-btn" onclick="selectStage(3)" id="stage-btn-3" style="padding: 25px 50px; font-size: 60px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; background: #1e293b; color: #94a3b8;">
+                ⏸️ STAGE 3<br><span id="stage3-count">0</span>
+            </button>
+            <button class="stage-btn" onclick="selectStage(4)" id="stage-btn-4" style="padding: 25px 50px; font-size: 60px; font-weight: bold; border: none; border-radius: 15px; cursor: pointer; background: #1e293b; color: #94a3b8;">
+                🐻 STAGE 4<br><span id="stage4-count">0</span>
+            </button>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs-container">
+            <button class="tab-button active" onclick="switchTab('current', event)">
+                🎯 CURRENT <span id="current-stage-label">STAGE 1</span> STOCKS
+            </button>
+            <button class="tab-button" onclick="switchTab('history', event)">
+                📊 HISTORICAL PERFORMANCE
+            </button>
+        </div>
+
+        <!-- TAB 1: CURRENT STAGE 2 STOCKS -->
+        <div id="current-tab" class="tab-content active">
+            <!-- Summary -->
+            <div class="summary-section">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-label">Active Stocks</div>
+                        <div class="summary-value info" id="current-total">0</div>
+                        <div class="summary-sub" id="summary-stage-label">Currently in Stage 1</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Total Strategies</div>
+                        <div class="summary-value warning" id="current-strategies">0</div>
+                        <div class="summary-sub">Active Signals</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Avg Score</div>
+                        <div class="summary-value success" id="current-avg-score">0.0</div>
+                        <div class="summary-sub" id="summary-score-label">Stage 1 Score</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Avg Current Gain</div>
+                        <div class="summary-value info" id="current-avg-gain">+0%</div>
+                        <div class="summary-sub" id="summary-entry-label">Since Stage 1 Entry</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution for Current Stocks -->
+            <div class="distribution-section">
+                <div class="distribution-title" id="distribution-title">📊 Current Performance Distribution</div>
+                <div class="distribution-bars">
+                    <div class="bar-row">
+                        <div class="bar-label" id="label-excellent">🚀 Excellent (20%+)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill excellent" id="current-bar-excellent" style="width: 0%">
+                                <span id="current-count-excellent">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="current-pct-excellent">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="label-good">✅ Good (10-20%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill good" id="current-bar-good" style="width: 0%">
+                                <span id="current-count-good">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="current-pct-good">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="label-moderate">📊 Moderate (5-10%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill moderate" id="current-bar-moderate" style="width: 0%">
+                                <span id="current-count-moderate">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="current-pct-moderate">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="label-slight">📉 Slight (0-5%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill slight" id="current-bar-slight" style="width: 0%">
+                                <span id="current-count-slight">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="current-pct-slight">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="label-loss">❌ Loss (wrong direction)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill loss" id="current-bar-loss" style="width: 0%">
+                                <span id="current-count-loss">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="current-pct-loss">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-text" id="info-text-dynamic">
+                💡 These are stocks CURRENTLY in the selected stage - Active trading opportunities right now
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <input type="text" class="search-input" id="current-search" placeholder="Search symbol..." onkeyup="filterCurrentTable()">
+                </div>
+                <div class="control-group">
+                    <select id="performance-filter" onchange="filterCurrentTable()" style="padding: 15px 25px; font-size: 48px; background: #1e293b; color: white; border: 2px solid #334155; border-radius: 8px; cursor: pointer;">
+                        <option value="all">📊 All Performance</option>
+                        <option value="excellent">🚀 Excellent (20%+)</option>
+                        <option value="good">✅ Good (10-20%)</option>
+                        <option value="moderate">📊 Moderate (5-10%)</option>
+                        <option value="slight">📉 Slight (0-5%)</option>
+                        <option value="loss">❌ Loss</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-primary" onclick="exportCurrentToExcel()">📊 Download Current</button>
+                    <button class="btn btn-secondary" onclick="refreshCurrent()">🔄 Refresh</button>
+                    <button id="auto-refresh-btn" class="btn" style="background: #22c55e; color: white;" onclick="toggleAutoRefresh()">⏱️ Auto: ON</button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <div id="current-loading" class="loading">
+                    <div class="spinner"></div>
+                    Loading Current Stocks...
+                </div>
+
+                <table id="current-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th onclick="sortCurrentTable(0)">Rank <span class="sort-indicator" id="current-sort-0"></span></th>
+                            <th onclick="sortCurrentTable(1)">Symbol <span class="sort-indicator" id="current-sort-1"></span></th>
+                            <th onclick="sortCurrentTable(2)">Score <span class="sort-indicator" id="current-sort-2">↓</span></th>
+                            <th onclick="sortCurrentTable(3)">Sentiment <span class="sort-indicator" id="current-sort-3"></span></th>
+                            <th onclick="sortCurrentTable(4)">Triggered <span class="sort-indicator" id="current-sort-4"></span></th>
+                            <th onclick="sortCurrentTable(5)">Strategies <span class="sort-indicator" id="current-sort-5"></span></th>
+                            <th onclick="sortCurrentTable(6)">Price <span class="sort-indicator" id="current-sort-6"></span></th>
+                            <th onclick="sortCurrentTable(7)">Change % <span class="sort-indicator" id="current-sort-7"></span></th>
+                            <th onclick="sortCurrentTable(8)">Pattern <span class="sort-indicator" id="current-sort-8"></span></th>
+                            <th onclick="sortCurrentTable(9)">Confidence <span class="sort-indicator" id="current-sort-9"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="current-table-body"></tbody>
+                </table>
+
+                <div id="current-no-results" class="no-results" style="display: none;">
+                    No current Stage 2 stocks found.
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: HISTORICAL PERFORMANCE -->
+        <div id="history-tab" class="tab-content">
+            <!-- Summary -->
+            <div class="summary-section">
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="summary-label">Total Analyzed</div>
+                        <div class="summary-value info" id="history-total">0</div>
+                        <div class="summary-sub" id="history-stage-label">All-Time Stage 1 Stocks</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Success Rate</div>
+                        <div class="summary-value success" id="history-success-rate">0%</div>
+                        <div class="summary-sub"><span id="history-gainers">0</span> <span id="history-gainers-label">Gainers</span> / <span id="history-losers">0</span> <span id="history-losers-label">Losers</span></div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label" id="history-avg-label">Avg Peak Gain</div>
+                        <div class="summary-value warning" id="history-avg-gain">+0%</div>
+                        <div class="summary-sub">Average Performance</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-label">Best Performer</div>
+                        <div class="summary-value success" id="history-best-stock">-</div>
+                        <div class="summary-sub" id="history-best-gain">+0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distribution -->
+            <div class="distribution-section">
+                <div class="distribution-title" id="history-distribution-title">📊 Performance Distribution</div>
+                <div class="distribution-bars">
+                    <div class="bar-row">
+                        <div class="bar-label" id="hist-label-excellent">🚀 Excellent (20%+)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill excellent" id="bar-excellent" style="width: 0%">
+                                <span id="count-excellent">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="pct-excellent">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="hist-label-good">✅ Good (10-20%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill good" id="bar-good" style="width: 0%">
+                                <span id="count-good">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="pct-good">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="hist-label-moderate">📊 Moderate (5-10%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill moderate" id="bar-moderate" style="width: 0%">
+                                <span id="count-moderate">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="pct-moderate">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="hist-label-slight">📉 Slight (0-5%)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill slight" id="bar-slight" style="width: 0%">
+                                <span id="count-slight">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="pct-slight">0%</div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label" id="hist-label-loss">❌ Loss (negative)</div>
+                        <div class="bar-container">
+                            <div class="bar-fill loss" id="bar-loss" style="width: 0%">
+                                <span id="count-loss">0</span>
+                            </div>
+                        </div>
+                        <div class="bar-info" id="pct-loss">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-text" id="history-info-text">
+                💡 Shows ALL stocks that entered Stage 1 (past and present) - Complete performance history
+            </div>
+
+            <!-- Controls -->
+            <div class="controls-section">
+                <div class="control-group">
+                    <input type="text" class="search-input" id="history-search" placeholder="Search symbol..." onkeyup="filterHistoryTable()">
+                    <select class="filter-select" id="history-category-filter" onchange="filterHistoryTable()">
+                        <option value="">All Categories</option>
+                        <option value="excellent">🚀 Excellent (20%+)</option>
+                        <option value="good">✅ Good (10-20%)</option>
+                        <option value="moderate">📊 Moderate (5-10%)</option>
+                        <option value="slight">📉 Slight (0-5%)</option>
+                        <option value="loss">❌ Loss</option>
+                    </select>
+                    <select class="filter-select" id="history-status-filter" onchange="filterHistoryTable()">
+                        <option value="">All Status</option>
+                        <option value="active">Active Only</option>
+                        <option value="inactive">Inactive Only</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button class="btn btn-primary" onclick="exportHistoryToExcel()">📊 Download History</button>
+                    <button class="btn btn-secondary" onclick="refreshHistory()">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-container">
+                <div id="history-loading" class="loading">
+                    <div class="spinner"></div>
+                    Loading Historical Performance...
+                </div>
+
+                <table id="history-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th onclick="sortHistoryTable(0)">Rank <span class="sort-indicator" id="history-sort-0"></span></th>
+                            <th onclick="sortHistoryTable(1)">Symbol <span class="sort-indicator" id="history-sort-1"></span></th>
+                            <th onclick="sortHistoryTable(2)">Peak Gain % <span class="sort-indicator" id="history-sort-2">↓</span></th>
+                            <th onclick="sortHistoryTable(3)">Initial <span class="sort-indicator" id="history-sort-3"></span></th>
+                            <th onclick="sortHistoryTable(4)">Peak <span class="sort-indicator" id="history-sort-4"></span></th>
+                            <th onclick="sortHistoryTable(5)">Current <span class="sort-indicator" id="history-sort-5"></span></th>
+                            <th onclick="sortHistoryTable(6)">Current % <span class="sort-indicator" id="history-sort-6"></span></th>
+                            <th onclick="sortHistoryTable(7)">Category <span class="sort-indicator" id="history-sort-7"></span></th>
+                            <th onclick="sortHistoryTable(8)">Triggered <span class="sort-indicator" id="history-sort-8"></span></th>
+                            <th onclick="sortHistoryTable(9)">Status <span class="sort-indicator" id="history-sort-9"></span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body"></tbody>
+                </table>
+
+                <div id="history-no-results" class="no-results" style="display: none;">
+                    No results found.
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Verification Screen -->
-    <div id="verify-screen" class="screen">
-      <div class="verify-card">
-        <div id="verify-form-section">
-          <div class="verify-icon">📧</div>
-          <h2>Check Your Email</h2>
-          <p class="subtitle">We sent a 6-digit code to</p>
-          <p class="email-display" id="verify-email-display">user@email.com</p>
-          
-          <div class="code-inputs" id="code-inputs">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-            <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
-          </div>
-          
-          <p class="verify-error" id="verify-error">Invalid code. Please try again.</p>
-          
-          <button id="verify-btn" class="btn-primary">Verify Email ✓</button>
-          
-          <div class="resend-section">
-            <p>Didn't receive the code?</p>
-            <button id="resend-btn" class="btn-link">Resend Code</button>
-            <p class="timer" id="resend-timer"></p>
-          </div>
-          
-          <button id="back-btn" class="btn-back">← Use a different email</button>
-        </div>
+    <script>
+        let currentData = [];
+        let historyData = [];
+        let allStocksData = [];
+        let currentSort = { column: 2, direction: 'desc' };
+        let historySort = { column: 2, direction: 'desc' };
+        let activeTab = 'current';
+        let selectedStage = 1;
         
-        <div class="verify-success" id="verify-success">
-          <div class="check">✅</div>
-          <h2>Email Verified!</h2>
-          <p>Redirecting to Facts Search...</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- App Screen -->
-    <div id="app-screen" class="screen">
-      <header class="app-header">
-        <div class="header-left">
-          <div class="header-logo">🔍</div>
-          <div>
-            <h1>Facts Search</h1>
-            <p>Search Famous Public Documents</p>
-          </div>
-        </div>
-        <span class="user-badge" id="user-email">👤 user@email.com <span class="verified-badge">✓</span></span>
-      </header>
-
-      <section class="sources-section">
-        <h2>📂 Select Document Source</h2>
-        <div class="sources-grid" id="sources-grid">
-          <div class="source-card active" data-source="cia-factbook">
-            <span class="source-icon">🌍</span>
-            <h3>CIA World Factbook</h3>
-            <p>Country information</p>
-          </div>
-          <div class="source-card" data-source="us-constitution">
-            <span class="source-icon">📜</span>
-            <h3>US Constitution</h3>
-            <p>Articles & Amendments</p>
-          </div>
-          <div class="source-card" data-source="declaration">
-            <span class="source-icon">🗽</span>
-            <h3>Declaration of Independence</h3>
-            <p>Founding document</p>
-          </div>
-          <div class="source-card" data-source="un-rights">
-            <span class="source-icon">🕊️</span>
-            <h3>UN Human Rights</h3>
-            <p>30 Articles</p>
-          </div>
-          <div class="source-card" data-source="world-bank">
-            <span class="source-icon">📊</span>
-            <h3>World Bank Data</h3>
-            <p>Economic indicators</p>
-          </div>
-          <div class="source-card" data-source="gutenberg">
-            <span class="source-icon">📚</span>
-            <h3>Project Gutenberg</h3>
-            <p>70,000+ books</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="search-section">
-        <h2 id="search-title">🔍 Search CIA World Factbook</h2>
-        <div class="search-box">
-          <input type="text" id="search-input" placeholder="Enter country name (e.g., Pakistan, Germany)">
-          <button id="search-btn">🔍 Search</button>
-        </div>
-        <p class="hint" id="search-hint">💡 Enter full country name — opens CIA Factbook page directly</p>
-      </section>
-
-      <div class="loading" id="loading" style="display:none;">
-        <div class="spinner"></div>
-        <p>Searching...</p>
-      </div>
-
-      <section class="results-section" id="results-section" style="display:none;">
-        <h2 id="results-title">📄 Results</h2>
-        <div class="results-list" id="results-content"></div>
-      </section>
-
-      <section id="error-section" style="display:none;">
-        <div class="error-card">
-          <span class="error-icon">😕</span>
-          <h3 id="error-title">Not Found</h3>
-          <p id="error-message">Please try a different search.</p>
-        </div>
-      </section>
-    </div>
-  </div>
-
-  <footer class="app-footer">
-    <p>Built by <strong>Office Soft Solutions</strong></p>
-  </footer>
-
-  <script>
-    const API_BASE = '';
-    let currentUser = null;
-    let currentSource = 'cia-factbook';
-    let resendCooldown = 0;
-    let resendTimer = null;
-
-    const SOURCES = {
-      'cia-factbook': { title: '🔍 Search CIA World Factbook', placeholder: 'Enter country name (e.g., Pakistan, Germany)', hint: '💡 Enter full country name — opens CIA Factbook page directly' },
-      'us-constitution': { title: '🔍 Search US Constitution', placeholder: 'Search amendments (e.g., "freedom")', hint: '💡 Try: preamble, 1, 2, speech, arms' },
-      'declaration': { title: '🔍 Declaration of Independence', placeholder: 'Click search to view', hint: '💡 Click Search to view full document' },
-      'un-rights': { title: '🔍 Search UN Human Rights', placeholder: 'Search articles (e.g., "freedom")', hint: '💡 Try: 1, freedom, education, or "all"' },
-      'world-bank': { title: '🔍 Search World Bank Data', placeholder: 'Enter country code (e.g., USA)', hint: '💡 Use codes: USA, GBR, IND, CHN' },
-      'gutenberg': { title: '🔍 Search Project Gutenberg', placeholder: 'Search books by title or author', hint: '💡 Try: Shakespeare, Dickens' }
-    };
-
-    // ==================== CODE INPUT HANDLING ====================
-    const codeInputs = document.querySelectorAll('#code-inputs input');
-    
-    codeInputs.forEach((input, index) => {
-      input.addEventListener('input', (e) => {
-        const val = e.target.value.replace(/[^0-9]/g, '');
-        e.target.value = val;
-        if (val && index < codeInputs.length - 1) {
-          codeInputs[index + 1].focus();
-        }
-        if (getCode().length === 6) {
-          verifyCode();
-        }
-      });
-      
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !e.target.value && index > 0) {
-          codeInputs[index - 1].focus();
-        }
-      });
-      
-      input.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
-        if (pasted.length >= 6) {
-          for (let i = 0; i < 6; i++) {
-            codeInputs[i].value = pasted[i] || '';
-          }
-          codeInputs[5].focus();
-          setTimeout(() => verifyCode(), 100);
-        }
-      });
-    });
-
-    function getCode() {
-      return Array.from(codeInputs).map(i => i.value).join('');
-    }
-
-    function clearCode() {
-      codeInputs.forEach(i => i.value = '');
-      codeInputs[0].focus();
-    }
-
-    // ==================== SCREEN NAVIGATION ====================
-    function showScreen(screenId) {
-      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-      document.getElementById(screenId).classList.add('active');
-    }
-
-    // ==================== LOGIN ====================
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('email-input').value.trim();
-      const btn = document.getElementById('login-btn');
-      
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-small"></span> Sending code...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          currentUser = data.email;
-          document.getElementById('verify-email-display').textContent = currentUser;
-          showScreen('verify-screen');
-          startResendCooldown();
-          setTimeout(() => codeInputs[0].focus(), 300);
-        } else {
-          alert(data.error || 'Failed to send code');
-        }
-      } catch (err) {
-        alert('Connection error. Please try again.');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Send Verification Code →';
-      }
-    });
-
-    // ==================== VERIFY ====================
-    document.getElementById('verify-btn').addEventListener('click', verifyCode);
-
-    async function verifyCode() {
-      const code = getCode();
-      if (code.length !== 6) return;
-
-      const btn = document.getElementById('verify-btn');
-      const errorEl = document.getElementById('verify-error');
-      errorEl.style.display = 'none';
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-small"></span> Verifying...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/verify`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: currentUser, code })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          document.getElementById('verify-form-section').style.display = 'none';
-          document.getElementById('verify-success').style.display = 'block';
-          
-          setTimeout(() => {
-            document.getElementById('user-email').innerHTML = '👤 ' + currentUser + ' <span class="verified-badge">✓</span>';
-            showScreen('app-screen');
-          }, 1500);
-        } else {
-          errorEl.textContent = data.error || 'Invalid code';
-          errorEl.style.display = 'block';
-          clearCode();
-        }
-      } catch (err) {
-        errorEl.textContent = 'Connection error. Please try again.';
-        errorEl.style.display = 'block';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Verify Email ✓';
-      }
-    }
-
-    // ==================== RESEND CODE ====================
-    document.getElementById('resend-btn').addEventListener('click', async () => {
-      if (resendCooldown > 0) return;
-
-      const btn = document.getElementById('resend-btn');
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/resend-code`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: currentUser })
-        });
-        const data = await res.json();
-
-        if (data.success) {
-          btn.textContent = 'Code Sent! ✓';
-          clearCode();
-          document.getElementById('verify-error').style.display = 'none';
-          startResendCooldown();
-          setTimeout(() => { btn.textContent = 'Resend Code'; }, 2000);
-        } else {
-          btn.textContent = 'Failed — Try Again';
-          setTimeout(() => { btn.textContent = 'Resend Code'; btn.disabled = false; }, 2000);
-        }
-      } catch (err) {
-        btn.textContent = 'Error — Try Again';
-        setTimeout(() => { btn.textContent = 'Resend Code'; btn.disabled = false; }, 2000);
-      }
-    });
-
-    function startResendCooldown() {
-      resendCooldown = 60;
-      const btn = document.getElementById('resend-btn');
-      const timerEl = document.getElementById('resend-timer');
-      btn.disabled = true;
-
-      if (resendTimer) clearInterval(resendTimer);
-      resendTimer = setInterval(() => {
-        resendCooldown--;
-        if (resendCooldown <= 0) {
-          clearInterval(resendTimer);
-          timerEl.textContent = '';
-          btn.disabled = false;
-        } else {
-          timerEl.textContent = `Resend available in ${resendCooldown}s`;
-        }
-      }, 1000);
-    }
-
-    // ==================== BACK BUTTON ====================
-    document.getElementById('back-btn').addEventListener('click', () => {
-      document.getElementById('verify-form-section').style.display = 'block';
-      document.getElementById('verify-success').style.display = 'none';
-      document.getElementById('verify-error').style.display = 'none';
-      clearCode();
-      if (resendTimer) clearInterval(resendTimer);
-      showScreen('login-screen');
-    });
-
-    // ==================== SOURCE SELECTION ====================
-    document.querySelectorAll('.source-card').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.source-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-        currentSource = card.dataset.source;
-        const s = SOURCES[currentSource];
-        document.getElementById('search-title').textContent = s.title;
-        document.getElementById('search-input').placeholder = s.placeholder;
-        document.getElementById('search-hint').textContent = s.hint;
-        document.getElementById('search-input').value = '';
-        document.getElementById('results-section').style.display = 'none';
-        document.getElementById('error-section').style.display = 'none';
-      });
-    });
-
-    // ==================== SEARCH ====================
-    document.getElementById('search-btn').addEventListener('click', performSearch);
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') performSearch();
-    });
-
-    async function performSearch() {
-      const query = document.getElementById('search-input').value.trim();
-
-      if (currentSource === 'cia-factbook') {
-        if (!query) {
-          showError('Enter a country name', 'Please type a country name like "Pakistan" or "Germany".');
-          return;
-        }
-        const countrySlug = query.toLowerCase().replace(/\s+/g, '-');
-        const ciaUrl = `https://www.cia.gov/the-world-factbook/countries/${countrySlug}/`;
-        window.open(ciaUrl, '_blank');
-        return;
-      }
-
-      const searchQuery = query || 'all';
-      document.getElementById('loading').style.display = 'block';
-      document.getElementById('results-section').style.display = 'none';
-      document.getElementById('error-section').style.display = 'none';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/search/${currentSource}?query=${encodeURIComponent(searchQuery)}`);
-        const data = await res.json();
-        document.getElementById('loading').style.display = 'none';
-
-        if (data.success) {
-          displayResults(data.data);
-        } else {
-          showError(data.error || 'Not found', data.suggestion || 'Try a different search.');
-        }
-      } catch (err) {
-        document.getElementById('loading').style.display = 'none';
-        showError('Connection Error', 'Please check your connection.');
-      }
-    }
-
-    function displayResults(data) {
-      const container = document.getElementById('results-content');
-      container.innerHTML = '';
-
-      if (data.matches && data.matches.length > 0) {
-        data.matches.forEach(m => {
-          container.innerHTML += `<div class="result-item"><h4>${m.type || 'Result'}${m.title ? ': ' + m.title : ''}</h4><p>${m.content}</p>${m.year ? '<div class="meta">Year: ' + m.year + '</div>' : ''}</div>`;
-        });
-      } else if (data.all_articles) {
-        for (const [num, text] of Object.entries(data.all_articles)) {
-          container.innerHTML += `<div class="result-item"><h4>Article ${num}</h4><p>${text}</p></div>`;
-        }
-      } else if (data.books) {
-        data.books.forEach(b => {
-          container.innerHTML += `<div class="result-item"><h4>${b.title}</h4><p>by ${b.authors || 'Unknown'}</p><p><a href="${b.url}" target="_blank">Read Online →</a></p></div>`;
-        });
-      } else {
-        for (const [key, value] of Object.entries(data)) {
-          if (key !== 'source' && value) {
-            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            if (typeof value === 'string' && value.startsWith('http')) {
-              container.innerHTML += `<div class="result-item"><h4>${label}</h4><p><a href="${value}" target="_blank">Open Source →</a></p></div>`;
-            } else {
-              container.innerHTML += `<div class="result-item"><h4>${label}</h4><p>${Array.isArray(value) ? value.join(', ') : value}</p></div>`;
+        // Helper function to parse UTC time from database
+        // Database stores UTC times without 'Z' suffix, so we add it
+        function parseDbTime(timeStr) {
+            if (!timeStr) return null;
+            let str = timeStr.toString();
+            // If no timezone indicator, assume UTC and add 'Z'
+            if (!str.endsWith('Z') && !str.includes('+') && !str.includes('-', 10)) {
+                str = str.replace(' ', 'T') + 'Z';
             }
-          }
+            return new Date(str);
         }
-      }
+        
+        const stageColors = {
+            1: '#3b82f6',  // Blue
+            2: '#22c55e',  // Green
+            3: '#f59e0b',  // Orange
+            4: '#ef4444'   // Red
+        };
+        
+        const stageNames = {
+            1: 'STAGE 1',
+            2: 'STAGE 2', 
+            3: 'STAGE 3',
+            4: 'STAGE 4'
+        };
 
-      document.getElementById('results-title').textContent = '📄 ' + (data.source || 'Results');
-      document.getElementById('results-section').style.display = 'block';
-    }
+        // SELECT STAGE
+        function selectStage(stage) {
+            selectedStage = stage;
+            
+            // Update stage buttons
+            for (let i = 1; i <= 4; i++) {
+                const btn = document.getElementById(`stage-btn-${i}`);
+                if (i === stage) {
+                    btn.style.background = stageColors[i];
+                    btn.style.color = 'white';
+                } else {
+                    btn.style.background = '#1e293b';
+                    btn.style.color = '#94a3b8';
+                }
+            }
+            
+            // Update current stage label
+            document.getElementById('current-stage-label').textContent = stageNames[stage];
+            
+            // Reload data for selected stage
+            currentData = [];
+            historyData = [];
+            loadCurrentData();
+            if (activeTab === 'history') {
+                loadHistoryData();
+            }
+        }
 
-    function showError(title, message) {
-      document.getElementById('error-title').textContent = title;
-      document.getElementById('error-message').textContent = message;
-      document.getElementById('error-section').style.display = 'block';
-    }
-  </script>
+        // SWITCH TABS
+        function switchTab(tab, event) {
+            activeTab = tab;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tab + '-tab').classList.add('active');
+            
+            // Load data if not already loaded
+            if (tab === 'current' && currentData.length === 0) {
+                loadCurrentData();
+            } else if (tab === 'history' && historyData.length === 0) {
+                loadHistoryData();
+            }
+        }
+
+        // LOAD ALL STOCKS TO GET COUNTS
+        async function loadAllStocksCounts() {
+            try {
+                const response = await apiFetch('/api/stocks?showInactive=false');
+                allStocksData = await response.json();
+                
+                const stage1 = allStocksData.filter(s => s.stage === 1 && s.is_active).length;
+                const stage2 = allStocksData.filter(s => s.stage === 2 && s.is_active).length;
+                const stage3 = allStocksData.filter(s => s.stage === 3 && s.is_active).length;
+                const stage4 = allStocksData.filter(s => s.stage === 4 && s.is_active).length;
+                
+                document.getElementById('stage1-count').textContent = stage1;
+                document.getElementById('stage2-count').textContent = stage2;
+                document.getElementById('stage3-count').textContent = stage3;
+                document.getElementById('stage4-count').textContent = stage4;
+            } catch (error) {
+                console.error('Error loading counts:', error);
+            }
+        }
+
+        // LOAD CURRENT STAGE STOCKS
+        async function loadCurrentData() {
+            const loading = document.getElementById('current-loading');
+            const table = document.getElementById('current-table');
+            
+            loading.style.display = 'block';
+            loading.innerHTML = `<div class="spinner"></div>Loading Stage ${selectedStage} Stocks...`;
+            table.style.display = 'none';
+
+            try {
+                // Fetch stocks for selected stage
+                let endpoint = '/api/stocks?showInactive=false';
+                console.log('Fetching from:', apiUrl(endpoint));
+                
+                const response = await apiFetch(endpoint);
+                console.log('Response status:', response.status);
+                
+                const result = await response.json();
+                console.log('Total stocks received:', result.length);
+                
+                // Filter by selected stage
+                currentData = (result || []).filter(s => s.stage === selectedStage && s.is_active);
+                console.log(`Stage ${selectedStage} stocks:`, currentData.length);
+                
+                // Debug: Log first stock to see what data we have
+                if (currentData.length > 0) {
+                    console.log('First stock data:', {
+                        symbol: currentData[0].symbol,
+                        strategy_count: currentData[0].strategy_count,
+                        current_strategy_count: currentData[0].current_strategy_count,
+                        active_strategy_count: currentData[0].active_strategy_count,
+                        strategies: currentData[0].strategies,
+                        detected_strategies: currentData[0].detected_strategies,
+                        pattern_detected: currentData[0].pattern_detected,
+                        institutional_confidence: currentData[0].institutional_confidence,
+                        pattern_confidence: currentData[0].pattern_confidence
+                    });
+                }
+                
+                // Determine if this is a SHORT stage
+                const isShortStage = (selectedStage === 4);
+                
+                // Add score based on stage
+                currentData = currentData.map(stock => ({
+                    ...stock,
+                    stage_score: selectedStage === 2 ? (stock.stage_2_score || stock.stage_2_total_score || 0) :
+                                 selectedStage === 4 ? (stock.stage_4_score || 0) :
+                                 (stock.current_combined_score || 0),
+                    category: categorizePerformance(stock.price_change_percent || 0, isShortStage)
+                }));
+                
+                // Sort by score
+                currentData.sort((a, b) => (b.stage_score || 0) - (a.stage_score || 0));
+                
+                updateCurrentSummary();
+                updateCurrentDistribution();
+                renderCurrentTable();
+                
+                loading.style.display = 'none';
+                if (currentData.length > 0) {
+                    table.style.display = 'table';
+                }
+            } catch (error) {
+                console.error('Error loading current data:', error);
+                loading.innerHTML = `<p style="color: #ef4444;">Error loading data: ${error.message}</p>`;
+            }
+        }
+
+        // LOAD HISTORICAL DATA (ALL STOCKS FOR SELECTED STAGE)
+        async function loadHistoryData() {
+            const loading = document.getElementById('history-loading');
+            const table = document.getElementById('history-table');
+            
+            loading.style.display = 'block';
+            table.style.display = 'none';
+
+            try {
+                // Fetch all stocks that were ever in selected stage
+                const response = await apiFetch(`/api/stocks?showInactive=true`);
+                const result = await response.json();
+                
+                // Filter by selected stage
+                const stageStocks = (result || []).filter(s => s.stage === selectedStage);
+                
+                // Determine if this is a SHORT stage
+                const isShortStage = (selectedStage === 4);
+                
+                // Process data to calculate peak gains
+                historyData = stageStocks.map(stock => {
+                    const initialPrice = stock.initial_price || 0;
+                    const currentPrice = stock.current_price || 0;
+                    const peakPrice = stock.peak_price || currentPrice;
+                    
+                    // For SHORT stage, we want the LOWEST price (best for shorts)
+                    // For LONG stages, we want the HIGHEST price
+                    let peakGainPercent;
+                    if (isShortStage) {
+                        // For shorts: how much did price DROP from initial (positive = good)
+                        const lowestPrice = stock.lowest_price || currentPrice;
+                        peakGainPercent = initialPrice > 0 
+                            ? ((initialPrice - lowestPrice) / initialPrice * 100)
+                            : 0;
+                    } else {
+                        // For longs: how much did price RISE from initial
+                        peakGainPercent = initialPrice > 0 
+                            ? ((peakPrice - initialPrice) / initialPrice * 100)
+                            : 0;
+                    }
+                    
+                    const currentGainPercent = stock.price_change_percent || 0;
+                    
+                    return {
+                        ...stock,
+                        peak_price: peakPrice,
+                        peak_gain_percent: peakGainPercent,
+                        current_gain_percent: currentGainPercent,
+                        category: categorizePerformance(peakGainPercent, false) // already adjusted
+                    };
+                });
+                
+                // Sort by peak gain (default)
+                historyData.sort((a, b) => b.peak_gain_percent - a.peak_gain_percent);
+                
+                updateHistorySummary();
+                updateDistribution();
+                renderHistoryTable();
+                
+                loading.style.display = 'none';
+                table.style.display = 'table';
+            } catch (error) {
+                console.error('Error loading history data:', error);
+                loading.innerHTML = '<p style="color: #ef4444;">Error loading data. Please check server connection.</p>';
+            }
+        }
+
+        function categorizePerformance(gain, isShort = false) {
+            // For SHORT positions (Stage 4), invert the logic
+            // A price DROP is good for shorts, price UP is bad
+            const adjustedGain = isShort ? -gain : gain;
+            
+            if (adjustedGain >= 20) return 'excellent';
+            if (adjustedGain >= 10) return 'good';
+            if (adjustedGain >= 5) return 'moderate';
+            if (adjustedGain >= 0) return 'slight';
+            return 'loss';
+        }
+
+        // UPDATE SUMMARIES
+        function updateCurrentSummary() {
+            const total = currentData.length;
+            
+            // Calculate strategies count
+            let totalStrategies = 0;
+            currentData.forEach(s => {
+                if (s.active_strategy_count) {
+                    totalStrategies += s.active_strategy_count;
+                } else if (s.detected_strategies) {
+                    totalStrategies += s.detected_strategies.split(',').filter(x => x.trim()).length;
+                } else if (selectedStage === 4 && s.bearish_strategies) {
+                    totalStrategies += s.bearish_strategies;
+                }
+            });
+            
+            const avgScore = total > 0 
+                ? (currentData.reduce((sum, s) => sum + (s.stage_score || 0), 0) / total).toFixed(2)
+                : 0;
+            const avgGain = total > 0 
+                ? (currentData.reduce((sum, s) => sum + (s.price_change_percent || 0), 0) / total).toFixed(2)
+                : 0;
+            
+            document.getElementById('current-total').textContent = total;
+            document.getElementById('current-strategies').textContent = totalStrategies;
+            document.getElementById('current-avg-score').textContent = avgScore;
+            document.getElementById('current-avg-gain').textContent = (avgGain > 0 ? '+' : '') + avgGain + '%';
+            
+            // Update labels dynamically
+            document.getElementById('summary-stage-label').textContent = `Currently in Stage ${selectedStage}`;
+            document.getElementById('summary-score-label').textContent = `Stage ${selectedStage} Score`;
+            document.getElementById('summary-entry-label').textContent = `Since Stage ${selectedStage} Entry`;
+        }
+
+        // UPDATE CURRENT DISTRIBUTION
+        function updateCurrentDistribution() {
+            // Determine if this is a SHORT stage
+            const isShortStage = (selectedStage === 4);
+            
+            // Update distribution labels for SHORT vs LONG
+            if (isShortStage) {
+                document.getElementById('distribution-title').textContent = '📊 SHORT Performance (Price Drop = Success)';
+                document.getElementById('label-excellent').textContent = '🐻 Excellent Drop (20%+)';
+                document.getElementById('label-good').textContent = '✅ Good Drop (10-20%)';
+                document.getElementById('label-moderate').textContent = '📊 Moderate Drop (5-10%)';
+                document.getElementById('label-slight').textContent = '📉 Slight Drop (0-5%)';
+                document.getElementById('label-loss').textContent = '❌ Wrong Direction (price UP)';
+            } else {
+                document.getElementById('distribution-title').textContent = '📊 LONG Performance (Price Rise = Success)';
+                document.getElementById('label-excellent').textContent = '🚀 Excellent Gain (20%+)';
+                document.getElementById('label-good').textContent = '✅ Good Gain (10-20%)';
+                document.getElementById('label-moderate').textContent = '📊 Moderate Gain (5-10%)';
+                document.getElementById('label-slight').textContent = '📉 Slight Gain (0-5%)';
+                document.getElementById('label-loss').textContent = '❌ Loss (price DOWN)';
+            }
+            
+            // Add category to current data based on their current gain percentage
+            const categorizedCurrent = currentData.map(stock => ({
+                ...stock,
+                category: categorizePerformance(stock.price_change_percent || 0, isShortStage)
+            }));
+
+            const categories = {
+                excellent: categorizedCurrent.filter(s => s.category === 'excellent').length,
+                good: categorizedCurrent.filter(s => s.category === 'good').length,
+                moderate: categorizedCurrent.filter(s => s.category === 'moderate').length,
+                slight: categorizedCurrent.filter(s => s.category === 'slight').length,
+                loss: categorizedCurrent.filter(s => s.category === 'loss').length
+            };
+            
+            const total = currentData.length;
+            
+            Object.keys(categories).forEach(cat => {
+                const count = categories[cat];
+                const pct = total > 0 ? (count / total * 100).toFixed(1) : 0;
+                
+                document.getElementById(`current-count-${cat}`).textContent = count;
+                document.getElementById(`current-pct-${cat}`).textContent = pct + '%';
+                
+                setTimeout(() => {
+                    document.getElementById(`current-bar-${cat}`).style.width = pct + '%';
+                }, 100);
+            });
+        }
+
+        function updateHistorySummary() {
+            const isShortStage = (selectedStage === 4);
+            const total = historyData.length;
+            
+            // For SHORT: gainers are those where price DROPPED (peak_gain_percent > 0 means we calculated drop correctly)
+            const gainers = historyData.filter(s => s.peak_gain_percent > 0).length;
+            const losers = total - gainers;
+            const successRate = total > 0 ? (gainers / total * 100).toFixed(1) : 0;
+            const avgGain = total > 0 
+                ? (historyData.reduce((sum, s) => sum + s.peak_gain_percent, 0) / total).toFixed(1)
+                : 0;
+            
+            const bestStock = historyData.length > 0 ? historyData[0] : null;
+            
+            document.getElementById('history-total').textContent = total;
+            document.getElementById('history-success-rate').textContent = successRate + '%';
+            document.getElementById('history-gainers').textContent = gainers;
+            document.getElementById('history-losers').textContent = losers;
+            
+            // Update labels based on SHORT vs LONG
+            if (isShortStage) {
+                document.getElementById('history-avg-gain').textContent = avgGain + '% drop';
+                document.getElementById('history-gainers-label').textContent = 'Successful Shorts';
+                document.getElementById('history-losers-label').textContent = 'Failed Shorts';
+            } else {
+                document.getElementById('history-avg-gain').textContent = '+' + avgGain + '%';
+                document.getElementById('history-gainers-label').textContent = 'Gainers';
+                document.getElementById('history-losers-label').textContent = 'Losers';
+            }
+            
+            if (bestStock) {
+                document.getElementById('history-best-stock').textContent = bestStock.symbol;
+                if (isShortStage) {
+                    document.getElementById('history-best-gain').textContent = bestStock.peak_gain_percent.toFixed(2) + '% drop';
+                } else {
+                    document.getElementById('history-best-gain').textContent = '+' + bestStock.peak_gain_percent.toFixed(2) + '%';
+                }
+            }
+        }
+
+        function updateDistribution() {
+            const isShortStage = (selectedStage === 4);
+            
+            const categories = {
+                excellent: historyData.filter(s => s.category === 'excellent').length,
+                good: historyData.filter(s => s.category === 'good').length,
+                moderate: historyData.filter(s => s.category === 'moderate').length,
+                slight: historyData.filter(s => s.category === 'slight').length,
+                loss: historyData.filter(s => s.category === 'loss').length
+            };
+            
+            const total = historyData.length;
+            
+            Object.keys(categories).forEach(cat => {
+                const count = categories[cat];
+                const pct = total > 0 ? (count / total * 100).toFixed(1) : 0;
+                
+                document.getElementById(`count-${cat}`).textContent = count;
+                document.getElementById(`pct-${cat}`).textContent = pct + '%';
+                
+                setTimeout(() => {
+                    document.getElementById(`bar-${cat}`).style.width = pct + '%';
+                }, 100);
+            });
+            
+            // Update history labels based on stage
+            document.getElementById('history-stage-label').textContent = `All-Time Stage ${selectedStage} Stocks`;
+            document.getElementById('history-info-text').textContent = `💡 Shows ALL stocks that entered Stage ${selectedStage} (past and present) - Complete performance history`;
+            
+            // Update history distribution title and labels
+            const histDistTitle = document.getElementById('history-distribution-title');
+            if (histDistTitle) {
+                if (isShortStage) {
+                    histDistTitle.textContent = '📊 SHORT Performance Distribution (Price Drop = Success)';
+                    document.getElementById('hist-label-excellent').textContent = '🐻 Excellent Drop (20%+)';
+                    document.getElementById('hist-label-good').textContent = '✅ Good Drop (10-20%)';
+                    document.getElementById('hist-label-moderate').textContent = '📊 Moderate Drop (5-10%)';
+                    document.getElementById('hist-label-slight').textContent = '📉 Slight Drop (0-5%)';
+                    document.getElementById('hist-label-loss').textContent = '❌ Wrong Direction (price UP)';
+                    document.getElementById('history-avg-label').textContent = 'Avg Peak Drop';
+                } else {
+                    histDistTitle.textContent = '📊 LONG Performance Distribution (Price Rise = Success)';
+                    document.getElementById('hist-label-excellent').textContent = '🚀 Excellent Gain (20%+)';
+                    document.getElementById('hist-label-good').textContent = '✅ Good Gain (10-20%)';
+                    document.getElementById('hist-label-moderate').textContent = '📊 Moderate Gain (5-10%)';
+                    document.getElementById('hist-label-slight').textContent = '📉 Slight Gain (0-5%)';
+                    document.getElementById('hist-label-loss').textContent = '❌ Loss (price DOWN)';
+                    document.getElementById('history-avg-label').textContent = 'Avg Peak Gain';
+                }
+            }
+        }
+
+        // RENDER CURRENT TABLE
+        function renderCurrentTable(dataToRender = currentData) {
+            const tbody = document.getElementById('current-table-body');
+            const noResults = document.getElementById('current-no-results');
+            
+            tbody.innerHTML = '';
+
+            if (dataToRender.length === 0) {
+                document.getElementById('current-table').style.display = 'none';
+                noResults.style.display = 'block';
+                noResults.innerHTML = `No stocks in Stage ${selectedStage}`;
+                return;
+            }
+
+            noResults.style.display = 'none';
+            document.getElementById('current-table').style.display = 'table';
+
+            dataToRender.forEach((stock, index) => {
+                const row = document.createElement('tr');
+                
+                const rank = index + 1;
+                let rankClass = '';
+                if (rank === 1) rankClass = 'rank-1';
+                else if (rank === 2) rankClass = 'rank-2';
+                else if (rank === 3) rankClass = 'rank-3';
+                
+                const score = stock.stage_score || 0;
+                let scoreClass = 'gain-loss';
+                if (score >= 80) scoreClass = 'gain-excellent';
+                else if (score >= 60) scoreClass = 'gain-good';
+                else if (score >= 40) scoreClass = 'gain-moderate';
+                
+                const changePercent = stock.price_change_percent || 0;
+                let changeClass = 'gain-slight';
+                if (changePercent > 0) changeClass = 'gain-good';
+                else if (changePercent < 0) changeClass = 'gain-loss';
+                
+                // Get triggered date based on stage - check multiple possible columns
+                let triggeredDate = 'N/A';
+                let triggeredTimestamp = null;
+                let rawTime = null;
+                
+                if (selectedStage === 2 && stock.stage_2_triggered_at) {
+                    rawTime = stock.stage_2_triggered_at;
+                } else if (selectedStage === 4 && stock.stage_4_triggered_at) {
+                    rawTime = stock.stage_4_triggered_at;
+                } else if (stock.first_detected) {
+                    rawTime = stock.first_detected;
+                } else if (stock.detected_at) {
+                    rawTime = stock.detected_at;
+                } else if (stock.last_updated) {
+                    rawTime = stock.last_updated;
+                }
+                
+                // Parse time - database stores UTC without 'Z', so we add it
+                if (rawTime) {
+                    // If no timezone indicator, assume UTC and add 'Z'
+                    let timeStr = rawTime.toString();
+                    if (!timeStr.endsWith('Z') && !timeStr.includes('+') && !timeStr.includes('-', 10)) {
+                        timeStr = timeStr.replace(' ', 'T') + 'Z';
+                    }
+                    triggeredTimestamp = new Date(timeStr);
+                }
+                
+                // Format with date AND time in LOCAL timezone
+                if (triggeredTimestamp && !isNaN(triggeredTimestamp.getTime())) {
+                    const dateStr = triggeredTimestamp.toLocaleDateString();
+                    const timeStr = triggeredTimestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    triggeredDate = `${dateStr} ${timeStr}`;
+                    // Store timestamp on stock for sorting
+                    stock._triggeredTimestamp = triggeredTimestamp.getTime();
+                } else {
+                    stock._triggeredTimestamp = 0;
+                }
+                
+                // News sentiment badge
+                const sentiment = stock.news_sentiment || 'N/A';
+                let sentimentClass = 'gain-slight';
+                if (sentiment.includes('BULLISH')) sentimentClass = 'gain-good';
+                else if (sentiment.includes('BEARISH')) sentimentClass = 'gain-loss';
+                
+                // Get strategies count FIRST (needed for confidence calculation)
+                // Check multiple possible column names from different API responses
+                let strategiesCount = stock.active_strategy_count || stock.current_strategy_count || stock.strategy_count || 0;
+                if (!strategiesCount && stock.detected_strategies) {
+                    strategiesCount = stock.detected_strategies.split(',').filter(s => s.trim()).length;
+                }
+                if (!strategiesCount && stock.strategies) {
+                    // strategies might be array or comma-separated string
+                    if (Array.isArray(stock.strategies)) {
+                        strategiesCount = stock.strategies.filter(s => s && s.trim()).length;
+                    } else if (typeof stock.strategies === 'string') {
+                        strategiesCount = stock.strategies.split(',').filter(s => s.trim()).length;
+                    }
+                }
+                if (!strategiesCount && selectedStage === 4) {
+                    strategiesCount = stock.bearish_strategies || 0;
+                }
+                
+                // Store for sorting
+                stock._strategiesCount = strategiesCount;
+                stock._pattern = stock.pattern_detected || stock.pattern_direction || '';
+                stock._confidence = 0;
+                
+                // Get confidence - check multiple possible column names OR calculate from available data
+                let confidence = stock.institutional_confidence || stock.pattern_confidence || stock.short_confidence || stock.news_confidence;
+                
+                // If no confidence column, calculate from score + strategies + sentiment
+                if (!confidence || confidence === 'N/A') {
+                    let calcConfidence = 0;
+                    
+                    // Score contributes 40%
+                    if (score >= 70) calcConfidence += 40;
+                    else if (score >= 50) calcConfidence += 30;
+                    else if (score >= 30) calcConfidence += 20;
+                    else calcConfidence += 10;
+                    
+                    // Strategies contribute 30%
+                    if (strategiesCount >= 5) calcConfidence += 30;
+                    else if (strategiesCount >= 3) calcConfidence += 20;
+                    else if (strategiesCount >= 1) calcConfidence += 10;
+                    
+                    // Sentiment contributes 30%
+                    if (selectedStage === 4) {
+                        // For SHORT stage, BEARISH sentiment is good
+                        if (sentiment.includes('BEARISH')) calcConfidence += 30;
+                        else if (sentiment === 'NEUTRAL') calcConfidence += 15;
+                    } else {
+                        // For LONG stages, BULLISH sentiment is good
+                        if (sentiment.includes('BULLISH')) calcConfidence += 30;
+                        else if (sentiment === 'NEUTRAL') calcConfidence += 15;
+                    }
+                    
+                    confidence = calcConfidence;
+                }
+                
+                // Store for sorting
+                stock._confidence = typeof confidence === 'number' ? confidence : 0;
+                
+                let confidenceClass = 'gain-loss';
+                if (confidence === 'HIGH' || confidence >= 70) confidenceClass = 'gain-excellent';
+                else if (confidence === 'MEDIUM' || confidence >= 40) confidenceClass = 'gain-moderate';
+                else if (confidence >= 20) confidenceClass = 'gain-slight';
+                
+                // Get pattern - check multiple possible column names
+                const pattern = stock.pattern_detected || stock.pattern_direction || (selectedStage === 4 ? 'SHORT' : 'LONG');
+                
+                // Format confidence display
+                let confidenceDisplay = confidence;
+                if (typeof confidence === 'number') {
+                    confidenceDisplay = confidence.toFixed(0) + '%';
+                }
+                
+                row.innerHTML = `
+                    <td class="rank-cell ${rankClass}">${rank}</td>
+                    <td class="symbol-cell" onclick="showStockHistory('${stock.symbol}')">${stock.symbol}</td>
+                    <td class="${scoreClass}">${score.toFixed ? score.toFixed(2) : score}</td>
+                    <td class="${sentimentClass}">${sentiment}</td>
+                    <td>${triggeredDate}</td>
+                    <td><span class="strategies-badge">${strategiesCount}</span></td>
+                    <td>$${(stock.current_price || 0).toFixed(2)}</td>
+                    <td class="${changeClass}">${changePercent > 0 ? '+' : ''}${changePercent.toFixed(3)}%</td>
+                    <td><span class="pattern-badge">${pattern}</span></td>
+                    <td class="${confidenceClass}">${confidenceDisplay}</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // RENDER HISTORY TABLE
+        function renderHistoryTable(dataToRender = historyData) {
+            const tbody = document.getElementById('history-table-body');
+            const noResults = document.getElementById('history-no-results');
+            const isShortStage = (selectedStage === 4);
+            
+            tbody.innerHTML = '';
+
+            if (dataToRender.length === 0) {
+                document.getElementById('history-table').style.display = 'none';
+                noResults.style.display = 'block';
+                return;
+            }
+
+            noResults.style.display = 'none';
+            document.getElementById('history-table').style.display = 'table';
+
+            dataToRender.forEach((stock, index) => {
+                const row = document.createElement('tr');
+                
+                const rank = index + 1;
+                let rankClass = '';
+                if (rank === 1) rankClass = 'rank-1';
+                else if (rank === 2) rankClass = 'rank-2';
+                else if (rank === 3) rankClass = 'rank-3';
+                
+                const peakGain = stock.peak_gain_percent;
+                const currentGain = stock.current_gain_percent;
+                
+                let gainClass = 'gain-loss';
+                if (peakGain >= 20) gainClass = 'gain-excellent';
+                else if (peakGain >= 10) gainClass = 'gain-good';
+                else if (peakGain >= 5) gainClass = 'gain-moderate';
+                else if (peakGain >= 0) gainClass = 'gain-slight';
+                
+                // Get triggered date based on stage
+                let triggeredDate = 'N/A';
+                if (selectedStage === 2 && stock.stage_2_triggered_at) {
+                    triggeredDate = new Date(stock.stage_2_triggered_at).toLocaleDateString();
+                } else if (selectedStage === 4 && stock.stage_4_triggered_at) {
+                    triggeredDate = new Date(stock.stage_4_triggered_at).toLocaleDateString();
+                } else if (stock.first_detected) {
+                    triggeredDate = new Date(stock.first_detected).toLocaleDateString();
+                } else if (stock.last_updated) {
+                    triggeredDate = new Date(stock.last_updated).toLocaleDateString();
+                }
+                
+                // Category labels - different for SHORT
+                let categoryLabel;
+                if (isShortStage) {
+                    categoryLabel = {
+                        'excellent': '🐻 Excellent Drop',
+                        'good': '✅ Good Drop',
+                        'moderate': '📊 Moderate Drop',
+                        'slight': '📉 Slight Drop',
+                        'loss': '❌ Wrong Direction'
+                    }[stock.category] || stock.category;
+                } else {
+                    categoryLabel = {
+                        'excellent': '🚀 Excellent',
+                        'good': '✅ Good',
+                        'moderate': '📊 Moderate',
+                        'slight': '📉 Slight',
+                        'loss': '❌ Loss'
+                    }[stock.category] || stock.category;
+                }
+                
+                // For SHORT stage, show "Peak Drop" instead of "Peak Gain"
+                // Peak price for SHORT = lowest price (best for shorts)
+                const peakLabel = isShortStage ? 'Lowest' : 'Peak';
+                const peakPrice = isShortStage ? (stock.lowest_price || stock.current_price) : (stock.peak_price || 0);
+                
+                // Format gain display
+                const peakGainDisplay = isShortStage 
+                    ? `${peakGain.toFixed(3)}% drop` 
+                    : `${peakGain > 0 ? '+' : ''}${peakGain.toFixed(3)}%`;
+                    
+                const currentGainDisplay = isShortStage
+                    ? `${currentGain > 0 ? '' : '+'}${(-currentGain).toFixed(3)}% drop`
+                    : `${currentGain > 0 ? '+' : ''}${currentGain.toFixed(3)}%`;
+                
+                row.innerHTML = `
+                    <td class="rank-cell ${rankClass}">${rank}</td>
+                    <td class="symbol-cell" onclick="showStockHistory('${stock.symbol}')">${stock.symbol}</td>
+                    <td class="${gainClass}">${peakGainDisplay}</td>
+                    <td>$${(stock.initial_price || 0).toFixed(2)}</td>
+                    <td>$${peakPrice.toFixed(2)}</td>
+                    <td>$${(stock.current_price || 0).toFixed(2)}</td>
+                    <td class="${gainClass}">${currentGainDisplay}</td>
+                    <td><span class="category-badge category-${stock.category}">${categoryLabel}</span></td>
+                    <td>${triggeredDate}</td>
+                    <td class="${stock.is_active ? 'status-active' : 'status-inactive'}">
+                        ${stock.is_active ? 'Active' : 'Inactive'}
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // SORTING
+        function sortCurrentTable(columnIndex) {
+            // Column order: Rank, Symbol, Score, Sentiment, Triggered, Strategies, Price, Change%, Pattern, Confidence
+            
+            if (currentSort.column === columnIndex) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = columnIndex;
+                currentSort.direction = 'desc';
+            }
+            
+            currentData.sort((a, b) => {
+                let aVal, bVal;
+                
+                switch(columnIndex) {
+                    case 0: // Rank
+                        return 0; // Don't sort by rank
+                    case 1: // Symbol
+                        aVal = (a.symbol || '').toString();
+                        bVal = (b.symbol || '').toString();
+                        return currentSort.direction === 'asc' 
+                            ? aVal.localeCompare(bVal)
+                            : bVal.localeCompare(aVal);
+                    case 2: // Score
+                        aVal = a.stage_score || 0;
+                        bVal = b.stage_score || 0;
+                        break;
+                    case 3: // Sentiment
+                        aVal = (a.news_sentiment || '').toString();
+                        bVal = (b.news_sentiment || '').toString();
+                        return currentSort.direction === 'asc' 
+                            ? aVal.localeCompare(bVal)
+                            : bVal.localeCompare(aVal);
+                    case 4: // Triggered
+                        aVal = a._triggeredTimestamp || 0;
+                        bVal = b._triggeredTimestamp || 0;
+                        break;
+                    case 5: // Strategies
+                        aVal = a._strategiesCount || 0;
+                        bVal = b._strategiesCount || 0;
+                        break;
+                    case 6: // Price
+                        aVal = parseFloat(a.current_price) || 0;
+                        bVal = parseFloat(b.current_price) || 0;
+                        break;
+                    case 7: // Change %
+                        aVal = parseFloat(a.price_change_percent) || 0;
+                        bVal = parseFloat(b.price_change_percent) || 0;
+                        break;
+                    case 8: // Pattern
+                        aVal = (a._pattern || '').toString();
+                        bVal = (b._pattern || '').toString();
+                        return currentSort.direction === 'asc' 
+                            ? aVal.localeCompare(bVal)
+                            : bVal.localeCompare(aVal);
+                    case 9: // Confidence
+                        aVal = a._confidence || 0;
+                        bVal = b._confidence || 0;
+                        break;
+                    default:
+                        return 0;
+                }
+                
+                return currentSort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+            
+            // Update sort indicators
+            document.querySelectorAll('[id^="current-sort-"]').forEach(el => el.textContent = '');
+            document.getElementById(`current-sort-${columnIndex}`).textContent = currentSort.direction === 'asc' ? '↑' : '↓';
+            
+            renderCurrentTable(currentData);
+        }
+
+        function sortHistoryTable(columnIndex) {
+            const headers = ['rank', 'symbol', 'peak_gain_percent', 'initial_price', 'peak_price', 
+                           'current_price', 'current_gain_percent', 'category', 'stage_2_triggered_at', 'is_active'];
+            
+            const column = headers[columnIndex];
+            
+            if (historySort.column === columnIndex) {
+                historySort.direction = historySort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                historySort.column = columnIndex;
+                historySort.direction = 'desc';
+            }
+            
+            historyData.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (columnIndex === 1 || columnIndex === 7) {
+                    aVal = a[column] || '';
+                    bVal = b[column] || '';
+                    return historySort.direction === 'asc' 
+                        ? aVal.toString().localeCompare(bVal.toString())
+                        : bVal.toString().localeCompare(aVal.toString());
+                } else if (columnIndex === 8) {
+                    aVal = new Date(a[column] || 0).getTime();
+                    bVal = new Date(b[column] || 0).getTime();
+                } else if (columnIndex === 9) {
+                    aVal = a[column] ? 1 : 0;
+                    bVal = b[column] ? 1 : 0;
+                } else {
+                    aVal = parseFloat(a[column]) || 0;
+                    bVal = parseFloat(b[column]) || 0;
+                }
+                
+                return historySort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+            
+            document.querySelectorAll('[id^="history-sort-"]').forEach(el => el.textContent = '');
+            document.getElementById(`history-sort-${columnIndex}`).textContent = historySort.direction === 'asc' ? '↑' : '↓';
+            
+            filterHistoryTable();
+        }
+
+        // FILTERING
+        function filterCurrentTable() {
+            const searchValue = document.getElementById('current-search').value.toUpperCase();
+            const performanceFilter = document.getElementById('performance-filter').value;
+            
+            let filteredData = currentData;
+            
+            // Filter by search
+            if (searchValue) {
+                filteredData = filteredData.filter(stock => 
+                    (stock.symbol || '').toUpperCase().includes(searchValue)
+                );
+            }
+            
+            // Filter by performance category
+            if (performanceFilter && performanceFilter !== 'all') {
+                filteredData = filteredData.filter(stock => stock.category === performanceFilter);
+            }
+            
+            renderCurrentTable(filteredData);
+        }
+
+        function filterHistoryTable() {
+            const searchValue = document.getElementById('history-search').value.toUpperCase();
+            const categoryFilter = document.getElementById('history-category-filter').value;
+            const statusFilter = document.getElementById('history-status-filter').value;
+            
+            let filteredData = historyData;
+            
+            if (searchValue) {
+                filteredData = filteredData.filter(stock => 
+                    (stock.symbol || '').toUpperCase().includes(searchValue)
+                );
+            }
+            
+            if (categoryFilter) {
+                filteredData = filteredData.filter(stock => stock.category === categoryFilter);
+            }
+            
+            if (statusFilter === 'active') {
+                filteredData = filteredData.filter(stock => stock.is_active);
+            } else if (statusFilter === 'inactive') {
+                filteredData = filteredData.filter(stock => !stock.is_active);
+            }
+            
+            renderHistoryTable(filteredData);
+        }
+
+        // EXCEL EXPORT
+        function exportCurrentToExcel() {
+            if (currentData.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+
+            const excelData = currentData.map((stock, index) => ({
+                'Rank': index + 1,
+                'Symbol': stock.symbol || 'N/A',
+                'Score': stock.stage_2_score || 0,
+                'Triggered Date': stock.stage_2_triggered_at 
+                    ? new Date(stock.stage_2_triggered_at).toLocaleDateString()
+                    : 'N/A',
+                'Active Strategies': stock.active_strategy_count || 0,
+                'Current Price': stock.current_price || 0,
+                'Change %': stock.price_change_percent || 0,
+                'Pattern': stock.pattern_detected || 'N/A',
+                'Institutional Confidence': stock.institutional_confidence || 'N/A'
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            ws['!cols'] = [
+                { wch: 6 }, { wch: 10 }, { wch: 8 }, { wch: 15 }, 
+                { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 20 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, 'Current Stage 2');
+
+            const timestamp = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `Current_Stage2_${timestamp}.xlsx`);
+            showSuccessMessage('Excel file downloaded!');
+        }
+
+        function exportHistoryToExcel() {
+            if (historyData.length === 0) {
+                alert('No data to export!');
+                return;
+            }
+
+            const excelData = historyData.map((stock, index) => ({
+                'Rank': index + 1,
+                'Symbol': stock.symbol || 'N/A',
+                'Peak Gain %': stock.peak_gain_percent.toFixed(3),
+                'Initial Price': stock.initial_price || 0,
+                'Peak Price': stock.peak_price || 0,
+                'Current Price': stock.current_price || 0,
+                'Current Gain %': stock.current_gain_percent.toFixed(3),
+                'Category': {
+                    'excellent': 'Excellent (20%+)',
+                    'good': 'Good (10-20%)',
+                    'moderate': 'Moderate (5-10%)',
+                    'slight': 'Slight (0-5%)',
+                    'loss': 'Loss'
+                }[stock.category],
+                'Triggered Date': stock.stage_2_triggered_at 
+                    ? new Date(stock.stage_2_triggered_at).toLocaleDateString()
+                    : 'N/A',
+                'Status': stock.is_active ? 'Active' : 'Inactive'
+            }));
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            ws['!cols'] = [
+                { wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 12 },
+                { wch: 12 }, { wch: 12 }, { wch: 18 }, { wch: 15 }, { wch: 10 }
+            ];
+            XLSX.utils.book_append_sheet(wb, ws, 'Stage 2 History');
+
+            const timestamp = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `Stage2_History_${timestamp}.xlsx`);
+            showSuccessMessage('Excel file downloaded!');
+        }
+
+        function showSuccessMessage(message) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'success-message';
+            msgDiv.textContent = message;
+            document.body.appendChild(msgDiv);
+            setTimeout(() => msgDiv.remove(), 3000);
+        }
+
+        // REFRESH
+        function refreshCurrent() {
+            loadCurrentData();
+        }
+
+        function refreshHistory() {
+            loadHistoryData();
+        }
+
+        // STOCK HISTORY MODAL FUNCTIONS
+        async function showStockHistory(symbol) {
+            const modal = document.getElementById('stock-history-modal');
+            const modalTitle = document.getElementById('modal-stock-symbol');
+            
+            // Show modal with loading state
+            modalTitle.textContent = `📈 ${symbol}`;
+            modal.classList.add('active');
+            
+            // Reset to overview tab
+            switchModalTab('overview');
+            
+            // Show loading in all tabs
+            document.getElementById('modal-tab-overview').innerHTML = '<div class="history-loading">Loading overview...</div>';
+            document.getElementById('modal-tab-charts').innerHTML = '<div class="chart-container"><div class="history-loading">Loading chart...</div></div>';
+            document.getElementById('modal-tab-history').innerHTML = '<div class="history-loading">Loading price history...</div>';
+            document.getElementById('modal-tab-strategies').innerHTML = '<div class="history-loading">Loading strategies...</div>';
+            document.getElementById('modal-tab-news').innerHTML = '<div class="history-loading">Loading news...</div>';
+            
+            // First, try to get stock from current data
+            let stock = currentData.find(s => s.symbol === symbol) || historyData.find(s => s.symbol === symbol);
+            
+            if (stock) {
+                // Build overview from existing data (will be updated with snapshot data)
+                let overviewContent = buildOverviewTab(stock);
+                document.getElementById('modal-tab-overview').innerHTML = overviewContent;
+                
+                // Load strategies
+                loadStrategiesTab(symbol);
+                
+                // Load news
+                loadNewsTab(symbol);
+            }
+            
+            try {
+                // Try to fetch price history from stock_snapshots (no limit - show all)
+                const snapshotsResponse = await apiFetch(`/api/stock-snapshots/${symbol}?limit=10000`);
+                
+                if (snapshotsResponse.ok) {
+                    const snapshots = await snapshotsResponse.json();
+                    
+                    if (snapshots && snapshots.length > 0) {
+                        // Get latest snapshot for Volume Profile data
+                        const latestSnapshot = snapshots[0];
+                        
+                        // Merge snapshot data into stock for Overview
+                        if (stock) {
+                            stock.institutional_confidence = latestSnapshot.institutional_confidence || stock.institutional_confidence;
+                            stock.volume_category = latestSnapshot.volume_category || stock.volume_category;
+                            stock.smart_money_flow = latestSnapshot.smart_money_flow || stock.smart_money_flow;
+                            stock.volume_quality = latestSnapshot.volume_quality || stock.volume_quality;
+                            stock.accumulation_score = latestSnapshot.accumulation_score || 0;
+                            stock.distribution_score = latestSnapshot.distribution_score || 0;
+                            
+                            // Rebuild Overview with snapshot data
+                            let overviewContent = buildOverviewTab(stock);
+                            document.getElementById('modal-tab-overview').innerHTML = overviewContent;
+                        }
+                        
+                        // Convert snapshots to price history format
+                        const priceHistory = snapshots.map(s => ({
+                            recorded_at: s.snapshot_time,
+                            price: s.current_price,
+                            price_change: s.price_change_percent,
+                            price_change_since_last: s.price_change_since_last,
+                            volume: s.volume,
+                            stage: s.stage,
+                            strategy_count: s.strategy_count,
+                            pattern_detected: s.pattern_detected,
+                            pattern_confidence: s.pattern_confidence,
+                            institutional_confidence: s.institutional_confidence
+                        }));
+                        
+                        console.log('Price history with strategies:', priceHistory[0]);
+                        
+                        // BUILD PRICE HISTORY TAB
+                        let historyContent = buildPriceHistoryTab(priceHistory);
+                        document.getElementById('modal-tab-history').innerHTML = historyContent;
+                        
+                        // LOAD CHARTS TAB
+                        loadChartTab(symbol, stock, priceHistory);
+                    } else {
+                        document.getElementById('modal-tab-history').innerHTML = '<div class="history-loading">📊 No snapshots found for this symbol</div>';
+                        document.getElementById('modal-tab-charts').innerHTML = '<div class="chart-container"><div class="history-loading">📊 No chart data available</div></div>';
+                    }
+                } else {
+                    // Try the old endpoint as fallback
+                    const response = await apiFetch(`/api/stock-history/${symbol}`);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        if (data && data.success) {
+                            stock = data.stock || stock;
+                            const priceHistory = data.price_history || [];
+                            
+                            // Update overview with full data
+                            let overviewContent = buildOverviewTab(stock);
+                            document.getElementById('modal-tab-overview').innerHTML = overviewContent;
+                            
+                            // BUILD PRICE HISTORY TAB
+                            let historyContent = buildPriceHistoryTab(priceHistory);
+                            document.getElementById('modal-tab-history').innerHTML = historyContent;
+                            
+                            // LOAD CHARTS TAB
+                            loadChartTab(symbol, stock, priceHistory);
+                        } else {
+                            document.getElementById('modal-tab-history').innerHTML = '<div class="history-loading">📊 Price history not available</div>';
+                            document.getElementById('modal-tab-charts').innerHTML = '<div class="chart-container"><div class="history-loading">📊 Chart data not available</div></div>';
+                        }
+                    } else {
+                        // Neither endpoint works
+                        document.getElementById('modal-tab-history').innerHTML = '<div class="history-loading">📊 Price history endpoint not configured</div>';
+                        document.getElementById('modal-tab-charts').innerHTML = '<div class="chart-container"><div class="history-loading">📊 Chart endpoint not configured</div></div>';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error loading stock history:', error);
+                document.getElementById('modal-tab-history').innerHTML = '<div class="history-loading">📊 Price history not available</div>';
+                document.getElementById('modal-tab-charts').innerHTML = '<div class="chart-container"><div class="history-loading">📊 Chart not available</div></div>';
+            }
+        }
+        
+        function buildOverviewTab(stock) {
+            let content = '';
+            
+            // Get stage-appropriate score
+            let scoreLabel = 'Score';
+            let scoreValue = 0;
+            if (stock.stage === 2) {
+                scoreLabel = 'Stage 2 Score';
+                scoreValue = stock.stage_2_score || stock.stage_2_total_score || 0;
+            } else if (stock.stage === 4) {
+                scoreLabel = 'Stage 4 Score';
+                scoreValue = stock.stage_4_score || 0;
+            } else {
+                scoreLabel = 'Combined Score';
+                scoreValue = stock.current_combined_score || stock.stage_score || 0;
+            }
+            
+            // Get strategies count - check all possible fields
+            let strategiesCount = stock.active_strategy_count || stock.current_strategy_count || stock.strategy_count || 0;
+            if (!strategiesCount && stock.detected_strategies) {
+                strategiesCount = stock.detected_strategies.split(',').filter(s => s.trim()).length;
+            }
+            if (!strategiesCount && stock.strategies) {
+                if (Array.isArray(stock.strategies)) {
+                    strategiesCount = stock.strategies.filter(s => s && s.trim()).length;
+                } else if (typeof stock.strategies === 'string') {
+                    strategiesCount = stock.strategies.split(',').filter(s => s.trim()).length;
+                }
+            }
+            if (!strategiesCount && stock.stage === 4) {
+                strategiesCount = stock.bearish_strategies || 0;
+            }
+            
+            console.log(`[Overview] ${stock.symbol}: strategy_count=${stock.strategy_count}, current_strategy_count=${stock.current_strategy_count}, calculated=${strategiesCount}`);
+            
+            // Get pattern and confidence
+            const pattern = stock.pattern_detected || stock.pattern_direction || (stock.stage === 4 ? 'SHORT' : 'LONG');
+            let confidence = stock.institutional_confidence || stock.pattern_confidence || stock.short_confidence || 'N/A';
+            if (typeof confidence === 'number') {
+                confidence = confidence.toFixed(0) + '%';
+            }
+            
+            // Current Status Section
+            content += `
+                <div class="history-detail-section">
+                    <div class="history-detail-title">📊 Current Status</div>
+                    <div class="history-stats-grid">
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Current Price</div>
+                            <div class="history-stat-value">$${(stock.current_price || 0).toFixed(2)}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">${scoreLabel}</div>
+                            <div class="history-stat-value">${typeof scoreValue === 'number' ? scoreValue.toFixed(2) : scoreValue}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Price Change %</div>
+                            <div class="history-stat-value" style="color: ${stock.price_change_percent > 0 ? '#10b981' : '#ef4444'}">
+                                ${stock.price_change_percent > 0 ? '+' : ''}${(stock.price_change_percent || 0).toFixed(3)}%
+                            </div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Strategies</div>
+                            <div class="history-stat-value">${strategiesCount}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Pattern</div>
+                            <div class="history-stat-value" style="font-size: 48px;">${pattern}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Confidence</div>
+                            <div class="history-stat-value">${confidence}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">News Sentiment</div>
+                            <div class="history-stat-value" style="color: ${(stock.news_sentiment || '').includes('BULLISH') ? '#10b981' : (stock.news_sentiment || '').includes('BEARISH') ? '#ef4444' : '#94a3b8'}">
+                                ${stock.news_sentiment || 'N/A'}
+                            </div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">News Score</div>
+                            <div class="history-stat-value">${stock.news_score || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Stage 2 Entry Section
+            if (stock.stage_2_triggered_at) {
+                const entryDateObj = parseDbTime(stock.stage_2_triggered_at);
+                const entryDate = entryDateObj ? entryDateObj.toLocaleDateString() : 'N/A';
+                const entryTime = entryDateObj ? entryDateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                const entryDateTime = entryDateObj ? `${entryDate} ${entryTime}` : 'N/A';
+                const daysInStage2 = entryDateObj ? Math.floor((new Date() - entryDateObj) / (1000 * 60 * 60 * 24)) : 0;
+                
+                content += `
+                    <div class="history-detail-section">
+                        <div class="history-detail-title">🎯 Stage 2 Entry</div>
+                        <div class="history-stats-grid">
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Entry Date</div>
+                                <div class="history-stat-value" style="font-size: 48px;">${entryDateTime}</div>
+                            </div>
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Initial Price</div>
+                                <div class="history-stat-value">$${(stock.initial_price || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Days in Stage 2</div>
+                                <div class="history-stat-value">${daysInStage2} days</div>
+                            </div>
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Day High (Peak)</div>
+                                <div class="history-stat-value">$${(stock.day_high || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Day Low</div>
+                                <div class="history-stat-value">$${(stock.day_low || 0).toFixed(2)}</div>
+                            </div>
+                            <div class="history-stat-item">
+                                <div class="history-stat-label">Prev Close</div>
+                                <div class="history-stat-value">$${(stock.prev_close || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Volume Profile Section
+            content += `
+                <div class="history-detail-section">
+                    <div class="history-detail-title">📊 Volume Profile & Institutional Activity</div>
+                    <div class="history-stats-grid">
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Institutional Confidence</div>
+                            <div class="history-stat-value" style="color: ${(stock.institutional_confidence || 0) >= 70 ? '#10b981' : (stock.institutional_confidence || 0) >= 40 ? '#f59e0b' : '#ef4444'}">
+                                ${(stock.institutional_confidence || 0).toFixed(1)}%
+                            </div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Volume Category</div>
+                            <div class="history-stat-value" style="font-size: 42px;">${stock.volume_category || 'N/A'}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Smart Money Flow</div>
+                            <div class="history-stat-value" style="color: ${(stock.smart_money_flow || '').includes('ACCUM') ? '#10b981' : (stock.smart_money_flow || '').includes('DIST') ? '#ef4444' : '#94a3b8'}; font-size: 42px;">
+                                ${stock.smart_money_flow || 'N/A'}
+                            </div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Volume Quality</div>
+                            <div class="history-stat-value" style="font-size: 42px;">${stock.volume_quality || 'N/A'}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Accumulation Score</div>
+                            <div class="history-stat-value" style="color: #10b981;">${(stock.accumulation_score || 0).toFixed(1)}</div>
+                        </div>
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">Distribution Score</div>
+                            <div class="history-stat-value" style="color: #ef4444;">${(stock.distribution_score || 0).toFixed(1)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            return content;
+        }
+        
+        // Store price history for sorting
+        let currentPriceHistory = [];
+        let priceHistorySort = { column: 0, direction: 'desc' };
+        
+        function buildPriceHistoryTab(priceHistory) {
+            currentPriceHistory = [...priceHistory]; // Store for sorting
+            let content = '';
+            
+            // Price History Table
+            if (priceHistory.length > 0) {
+                content += `
+                    <div class="history-detail-section">
+                        <div class="history-detail-title">💰 Price History (${priceHistory.length} Records)</div>
+                        <div style="overflow-x: auto; margin-top: 30px;">
+                            <table id="price-history-table" style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #0f172a; border-bottom: 2px solid #334155;">
+                                        <th onclick="sortPriceHistory(0)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: left; cursor: pointer;">
+                                            Date & Time <span id="price-sort-0">↓</span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(1)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: center; cursor: pointer;">
+                                            Stage <span id="price-sort-1"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(2)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Price <span id="price-sort-2"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(3)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Change <span id="price-sort-3"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(4)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Last Δ% <span id="price-sort-4"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(5)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Volume <span id="price-sort-5"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(6)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Strategies <span id="price-sort-6"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(7)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: center; cursor: pointer;">
+                                            Pattern <span id="price-sort-7"></span>
+                                        </th>
+                                        <th onclick="sortPriceHistory(8)" style="padding: 30px; font-size: 54px; color: #94a3b8; text-align: right; cursor: pointer;">
+                                            Confidence <span id="price-sort-8"></span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="price-history-tbody">
+                `;
+                
+                priceHistory.forEach(record => {
+                    content += renderPriceHistoryRow(record);
+                });
+                
+                content += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else {
+                content += `
+                    <div class="history-detail-section">
+                        <div class="history-detail-title">💰 Price History</div>
+                        <div style="text-align: center; padding: 60px; font-size: 54px; color: #94a3b8;">
+                            No detailed price history available
+                        </div>
+                    </div>
+                `;
+            }
+            
+            return content;
+        }
+        
+        function renderPriceHistoryRow(record) {
+            // Show both date AND time - convert UTC to local
+            const dateObj = parseDbTime(record.recorded_at || record.snapshot_time);
+            const dateStr = dateObj ? dateObj.toLocaleDateString() : 'N/A';
+            const timeStr = dateObj ? dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'}) : '';
+            const fullDateTime = dateObj ? `${dateStr} ${timeStr}` : 'N/A';
+            
+            const price = record.price || record.current_price || 0;
+            const change = record.price_change || record.price_change_percent || 0;
+            const lastChange = record.price_change_since_last || 0;
+            const volume = record.volume ? (record.volume / 1000000).toFixed(2) + 'M' : 'N/A';
+            const changeColor = change > 0 ? '#10b981' : change < 0 ? '#ef4444' : '#94a3b8';
+            const lastChangeColor = lastChange > 0 ? '#10b981' : lastChange < 0 ? '#ef4444' : '#94a3b8';
+            
+            // Get stage with color
+            const stage = record.stage || 1;
+            let stageColor = '#3b82f6'; // Blue for Stage 1
+            if (stage === 2) stageColor = '#22c55e'; // Green
+            else if (stage === 3) stageColor = '#f59e0b'; // Orange
+            else if (stage === 4) stageColor = '#ef4444'; // Red
+            
+            // Get strategies count from snapshot
+            const strategies = record.strategy_count || 0;
+            
+            // Get pattern - default based on stage
+            const pattern = record.pattern_detected || (stage === 4 ? 'SHORT' : 'LONG');
+            
+            // Get confidence
+            const confidence = record.institutional_confidence || record.pattern_confidence || 0;
+            const confidenceDisplay = confidence > 0 ? confidence.toFixed(0) + '%' : 'N/A';
+            let confidenceColor = '#94a3b8';
+            if (confidence >= 70) confidenceColor = '#10b981';
+            else if (confidence >= 40) confidenceColor = '#f59e0b';
+            else if (confidence > 0) confidenceColor = '#ef4444';
+            
+            return `
+                <tr style="border-bottom: 1px solid #334155;">
+                    <td style="padding: 24px; font-size: 48px; color: white;">${fullDateTime}</td>
+                    <td style="padding: 24px; font-size: 48px; color: ${stageColor}; text-align: center; font-weight: bold;">Stage ${stage}</td>
+                    <td style="padding: 24px; font-size: 48px; color: white; text-align: right;">$${price.toFixed(2)}</td>
+                    <td style="padding: 24px; font-size: 48px; color: ${changeColor}; text-align: right;">
+                        ${change > 0 ? '+' : ''}${change.toFixed(3)}%
+                    </td>
+                    <td style="padding: 24px; font-size: 48px; color: ${lastChangeColor}; text-align: right;">
+                        ${lastChange !== 0 ? (lastChange > 0 ? '+' : '') + lastChange.toFixed(3) + '%' : '-'}
+                    </td>
+                    <td style="padding: 24px; font-size: 48px; color: #94a3b8; text-align: right;">${volume}</td>
+                    <td style="padding: 24px; font-size: 48px; color: #8b5cf6; text-align: right; font-weight: bold;">${strategies}</td>
+                    <td style="padding: 24px; font-size: 48px; color: #3b82f6; text-align: center; font-weight: bold;">${pattern}</td>
+                    <td style="padding: 24px; font-size: 48px; color: ${confidenceColor}; text-align: right; font-weight: bold;">${confidenceDisplay}</td>
+                </tr>
+            `;
+        }
+        
+        function sortPriceHistory(columnIndex) {
+            if (priceHistorySort.column === columnIndex) {
+                priceHistorySort.direction = priceHistorySort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                priceHistorySort.column = columnIndex;
+                priceHistorySort.direction = 'desc';
+            }
+            
+            currentPriceHistory.sort((a, b) => {
+                let aVal, bVal;
+                
+                if (columnIndex === 0) { // Date & Time
+                    aVal = new Date(a.recorded_at || a.snapshot_time).getTime();
+                    bVal = new Date(b.recorded_at || b.snapshot_time).getTime();
+                } else if (columnIndex === 1) { // Stage
+                    aVal = a.stage || 1;
+                    bVal = b.stage || 1;
+                } else if (columnIndex === 2) { // Price
+                    aVal = a.price || a.current_price || 0;
+                    bVal = b.price || b.current_price || 0;
+                } else if (columnIndex === 3) { // Change
+                    aVal = a.price_change || a.price_change_percent || 0;
+                    bVal = b.price_change || b.price_change_percent || 0;
+                } else if (columnIndex === 4) { // Last Δ%
+                    aVal = a.price_change_since_last || 0;
+                    bVal = b.price_change_since_last || 0;
+                } else if (columnIndex === 5) { // Volume
+                    aVal = a.volume || 0;
+                    bVal = b.volume || 0;
+                } else if (columnIndex === 6) { // Strategies
+                    aVal = a.strategy_count || 0;
+                    bVal = b.strategy_count || 0;
+                } else if (columnIndex === 7) { // Pattern
+                    aVal = (a.pattern_detected || 'LONG').toString();
+                    bVal = (b.pattern_detected || 'LONG').toString();
+                    return priceHistorySort.direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                } else if (columnIndex === 8) { // Confidence
+                    aVal = a.institutional_confidence || a.pattern_confidence || 0;
+                    bVal = b.institutional_confidence || b.pattern_confidence || 0;
+                }
+                
+                return priceHistorySort.direction === 'asc' ? aVal - bVal : bVal - aVal;
+            });
+            
+            // Update sort indicators
+            for (let i = 0; i < 9; i++) {
+                const indicator = document.getElementById(`price-sort-${i}`);
+                if (indicator) {
+                    indicator.textContent = i === columnIndex ? (priceHistorySort.direction === 'asc' ? '↑' : '↓') : '';
+                }
+            }
+            
+            // Re-render table body
+            const tbody = document.getElementById('price-history-tbody');
+            if (tbody) {
+                tbody.innerHTML = currentPriceHistory.map(record => renderPriceHistoryRow(record)).join('');
+            }
+        }
+        
+        async function loadNewsTab(symbol) {
+            try {
+                const response = await apiFetch(`/api/stock-news/${symbol}`);
+                const data = await response.json();
+                
+                if (!data || !data.success || !data.news || data.news.length === 0) {
+                    document.getElementById('modal-tab-news').innerHTML = `
+                        <div class="history-loading">📰 No recent news found for ${symbol}</div>
+                    `;
+                    return;
+                }
+                
+                let newsContent = '';
+                data.news.forEach(item => {
+                    const date = new Date(item.published_at || item.date).toLocaleString();
+                    newsContent += `
+                        <div class="news-item">
+                            <div class="news-title">${item.title || 'No Title'}</div>
+                            <div class="news-date">📅 ${date}</div>
+                            <div class="news-summary">${item.summary || item.content || 'No summary available'}</div>
+                            ${item.url ? `<a href="${item.url}" target="_blank" style="color: #3b82f6; font-size: 42px; margin-top: 15px; display: block;">Read more →</a>` : ''}
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('modal-tab-news').innerHTML = newsContent;
+            } catch (error) {
+                console.error('Error loading news:', error);
+                document.getElementById('modal-tab-news').innerHTML = '<div class="history-loading">⚠️ Error loading news</div>';
+            }
+        }
+        
+        async function loadStrategiesTab(symbol) {
+            try {
+                const response = await apiFetch(`/api/stock-strategies/${symbol}`);
+                const data = await response.json();
+                
+                if (!data || !data.success || !data.strategies || data.strategies.length === 0) {
+                    document.getElementById('modal-tab-strategies').innerHTML = `
+                        <div class="history-loading">🎯 No active strategies found for ${symbol}</div>
+                    `;
+                    return;
+                }
+                
+                let strategiesContent = '<div class="history-detail-section"><div class="history-detail-title">🎯 Active Strategies</div><div class="history-stats-grid">';
+                
+                data.strategies.forEach(strategy => {
+                    strategiesContent += `
+                        <div class="history-stat-item">
+                            <div class="history-stat-label">${strategy.strategy_name || 'Unknown'}</div>
+                            <div class="history-stat-value" style="font-size: 54px;">
+                                Score: ${(strategy.score || 0).toFixed(1)}
+                            </div>
+                            <div class="history-stat-label" style="margin-top: 10px;">
+                                Confidence: ${(strategy.confidence || 0).toFixed(1)}%
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                strategiesContent += '</div></div>';
+                document.getElementById('modal-tab-strategies').innerHTML = strategiesContent;
+            } catch (error) {
+                console.error('Error loading strategies:', error);
+                document.getElementById('modal-tab-strategies').innerHTML = '<div class="history-loading">⚠️ Error loading strategies</div>';
+            }
+        }
+        
+        function loadChartTab(symbol, stock, priceHistory) {
+            const chartContainer = document.getElementById('modal-tab-charts');
+            
+            if (!priceHistory || priceHistory.length === 0) {
+                chartContainer.innerHTML = `
+                    <div class="chart-container">
+                        <div class="history-loading">📊 No price history available to chart</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create canvas element for chart - FULL WIDTH
+            chartContainer.innerHTML = `
+                <div class="history-detail-section">
+                    <div class="history-detail-title">📊 ${symbol} Price Chart (Last ${priceHistory.length} Updates)</div>
+                    <div style="padding: 45px; background: #0f172a; border-radius: 18px; height: 800px;">
+                        <canvas id="price-chart"></canvas>
+                    </div>
+                </div>
+            `;
+            
+            // Prepare data for chart (reverse to show oldest to newest)
+            const reversedHistory = [...priceHistory].reverse();
+            const labels = reversedHistory.map(record => {
+                const date = new Date(record.recorded_at);
+                return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            });
+            const prices = reversedHistory.map(record => record.price || 0);
+            
+            // Create chart with LARGER FONTS
+            const ctx = document.getElementById('price-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${symbol} Price`,
+                        data: prices,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 8,
+                        pointHoverRadius: 12,
+                        pointBackgroundColor: '#3b82f6',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            labels: {
+                                color: '#e2e8f0',
+                                font: {
+                                    size: 48,
+                                    weight: 'bold'
+                                },
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                            titleColor: '#e2e8f0',
+                            bodyColor: '#e2e8f0',
+                            borderColor: '#3b82f6',
+                            borderWidth: 3,
+                            padding: 24,
+                            titleFont: {
+                                size: 42,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 38
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return 'Price: $' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    size: 32,
+                                    weight: 'bold'
+                                },
+                                maxRotation: 45,
+                                minRotation: 45
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.2)',
+                                lineWidth: 2
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#94a3b8',
+                                font: {
+                                    size: 36,
+                                    weight: 'bold'
+                                },
+                                callback: function(value) {
+                                    return '$' + value.toFixed(2);
+                                },
+                                padding: 15
+                            },
+                            grid: {
+                                color: 'rgba(148, 163, 184, 0.2)',
+                                lineWidth: 2
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+        
+        function switchModalTab(tabName, event) {
+            // Hide all tab contents
+            document.querySelectorAll('.modal-tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active from all buttons
+            document.querySelectorAll('.modal-tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(`modal-tab-${tabName}`).classList.add('active');
+            
+            // Activate button
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+        }
+        
+        function closeHistoryModal() {
+            const modal = document.getElementById('stock-history-modal');
+            modal.classList.remove('active');
+        }
+        
+        // Close modal when clicking outside
+        document.addEventListener('click', (e) => {
+            const modal = document.getElementById('stock-history-modal');
+            if (e.target === modal) {
+                closeHistoryModal();
+            }
+        });
+
+        // INITIALIZE
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAllStocksCounts();
+            selectStage(1); // Start with Stage 1
+        });
+        
+        // Auto-refresh control
+        let autoRefreshEnabled = true;
+        let autoRefreshInterval = null;
+        
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => {
+                if (autoRefreshEnabled) {
+                    loadAllStocksCounts();
+                    loadCurrentData();
+                }
+            }, 30000);
+        }
+        
+        function toggleAutoRefresh() {
+            autoRefreshEnabled = !autoRefreshEnabled;
+            const btn = document.getElementById('auto-refresh-btn');
+            if (autoRefreshEnabled) {
+                btn.textContent = '⏱️ Auto: ON';
+                btn.style.background = '#22c55e';
+                console.log('Auto-refresh ENABLED');
+            } else {
+                btn.textContent = '⏸️ Auto: OFF';
+                btn.style.background = '#ef4444';
+                console.log('Auto-refresh DISABLED');
+            }
+        }
+        
+        // Start auto-refresh
+        startAutoRefresh();
+    </script>
+
+    <!-- STOCK HISTORY MODAL -->
+    <div id="stock-history-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-stock-symbol">Loading...</div>
+                <button class="modal-close" onclick="closeHistoryModal()">×</button>
+            </div>
+            
+            <!-- MODAL TABS -->
+            <div class="modal-tabs">
+                <button class="modal-tab-button active" onclick="switchModalTab('overview', event)">📋 Overview</button>
+                <button class="modal-tab-button" onclick="switchModalTab('charts', event)">📊 Charts</button>
+                <button class="modal-tab-button" onclick="switchModalTab('history', event)">💰 Price History</button>
+                <button class="modal-tab-button" onclick="switchModalTab('strategies', event)">🎯 Strategies</button>
+                <button class="modal-tab-button" onclick="switchModalTab('news', event)">📰 News</button>
+            </div>
+            
+            <!-- TAB CONTENT -->
+            <div id="modal-tab-overview" class="modal-tab-content active">
+                <div class="history-loading">Loading overview...</div>
+            </div>
+            
+            <div id="modal-tab-charts" class="modal-tab-content">
+                <div class="chart-container">
+                    <div class="history-loading">Loading chart...</div>
+                </div>
+            </div>
+            
+            <div id="modal-tab-history" class="modal-tab-content">
+                <div class="history-loading">Loading price history...</div>
+            </div>
+            
+            <div id="modal-tab-strategies" class="modal-tab-content">
+                <div class="history-loading">Loading strategies...</div>
+            </div>
+            
+            <div id="modal-tab-news" class="modal-tab-content">
+                <div class="history-loading">Loading news...</div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
