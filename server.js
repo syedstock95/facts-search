@@ -137,15 +137,12 @@ app.post('/api/login', async (req, res) => {
     const existing = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
 
     if (existing.rows.length > 0) {
-      // User exists — check if already verified
       if (existing.rows[0].verified) {
-        // Already verified — send new code for re-login
-        await pool.query(
-          'UPDATE users SET verification_code = $1, code_expires_at = $2, last_login = NOW() WHERE email = $3',
-          [code, expiresAt, cleanEmail]
-        );
+        // Already verified — skip verification, go straight to app
+        await pool.query('UPDATE users SET last_login = NOW() WHERE email = $1', [cleanEmail]);
+        return res.json({ success: true, email: cleanEmail, needsVerification: false, verified: true });
       } else {
-        // Not verified yet — update code
+        // Not verified yet — send new code
         await pool.query(
           'UPDATE users SET verification_code = $1, code_expires_at = $2 WHERE email = $3',
           [code, expiresAt, cleanEmail]
@@ -159,7 +156,7 @@ app.post('/api/login', async (req, res) => {
       );
     }
 
-    // Send verification email
+    // Send verification email (only for new/unverified users)
     await sendVerificationEmail(cleanEmail, code);
 
     res.json({ success: true, message: 'Verification code sent', email: cleanEmail, needsVerification: true });
