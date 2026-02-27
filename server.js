@@ -121,7 +121,33 @@ const UN_HUMAN_RIGHTS = {
 
 // ==================== API ROUTES ====================
 
-// Step 1: Login — send verification code
+// Check if email is verified (no code sent)
+app.post('/api/check-email', async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.includes('@')) {
+    return res.status(400).json({ error: 'Valid email required' });
+  }
+
+  const cleanEmail = email.toLowerCase().trim();
+
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
+
+    if (result.rows.length > 0 && result.rows[0].verified) {
+      // Already verified — update last login
+      await pool.query('UPDATE users SET last_login = NOW() WHERE email = $1', [cleanEmail]);
+      return res.json({ verified: true, email: cleanEmail });
+    }
+
+    // Not found or not verified
+    res.json({ verified: false, email: cleanEmail });
+  } catch (err) {
+    console.error('Check email error:', err.message);
+    res.status(500).json({ error: 'Failed to check email' });
+  }
+});
+
+// Send verification code (only for new/unverified users)
 app.post('/api/login', async (req, res) => {
   const { email } = req.body;
   if (!email || !email.includes('@')) {
@@ -130,24 +156,17 @@ app.post('/api/login', async (req, res) => {
 
   const cleanEmail = email.toLowerCase().trim();
   const code = generateCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
   try {
-    // Upsert user: insert or update verification code
     const existing = await pool.query('SELECT * FROM users WHERE email = $1', [cleanEmail]);
 
     if (existing.rows.length > 0) {
-      if (existing.rows[0].verified) {
-        // Already verified — skip verification, go straight to app
-        await pool.query('UPDATE users SET last_login = NOW() WHERE email = $1', [cleanEmail]);
-        return res.json({ success: true, email: cleanEmail, needsVerification: false, verified: true });
-      } else {
-        // Not verified yet — send new code
-        await pool.query(
-          'UPDATE users SET verification_code = $1, code_expires_at = $2 WHERE email = $3',
-          [code, expiresAt, cleanEmail]
-        );
-      }
+      // Update code for existing user
+      await pool.query(
+        'UPDATE users SET verification_code = $1, code_expires_at = $2 WHERE email = $3',
+        [code, expiresAt, cleanEmail]
+      );
     } else {
       // New user
       await pool.query(
@@ -156,17 +175,15 @@ app.post('/api/login', async (req, res) => {
       );
     }
 
-    // Send verification email (only for new/unverified users)
     await sendVerificationEmail(cleanEmail, code);
-
-    res.json({ success: true, message: 'Verification code sent', email: cleanEmail, needsVerification: true });
+    res.json({ success: true, message: 'Verification code sent', email: cleanEmail });
   } catch (err) {
     console.error('Login error:', err.message);
     res.status(500).json({ error: 'Failed to send verification email. Please try again.' });
   }
 });
 
-// Step 2: Verify code
+// Verify code
 app.post('/api/verify', async (req, res) => {
   const { email, code } = req.body;
   if (!email || !code) {
@@ -187,12 +204,10 @@ app.post('/api/verify', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Check if code is expired
     if (new Date() > new Date(user.code_expires_at)) {
       return res.status(400).json({ error: 'Code expired. Please request a new one.' });
     }
 
-    // Mark as verified and clear code
     await pool.query(
       'UPDATE users SET verified = TRUE, verification_code = NULL, code_expires_at = NULL, last_login = NOW() WHERE email = $1',
       [cleanEmail]
@@ -233,7 +248,7 @@ app.post('/api/resend-code', async (req, res) => {
   }
 });
 
-// Admin: view all users (protected)
+// Admin: view all users
 app.get('/api/admin/users', async (req, res) => {
   const adminKey = req.headers['x-admin-key'];
   if (adminKey !== process.env.ADMIN_KEY) {
