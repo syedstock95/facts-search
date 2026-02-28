@@ -8,8 +8,9 @@
   <title>Facts Search - Search Famous Public Documents</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Facts Search">
   <meta name="apple-mobile-web-app-title" content="Facts Search">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -145,7 +146,7 @@
       <span class="ad-label">Ad</span>
       <div class="ad-content">
         <div class="ad-placeholder" id="ad-slot">
-          📢 Your Ad Here — <a href="/cdn-cgi/l/email-protection#5c3f3332283d3f281c333a3a353f392f333a282f333029283533322f723f3331">Advertise with Us</a>
+          📢 Your Ad Here — <span style="color:#3182ce;font-weight:600;cursor:pointer" onclick="window.location='mai'+'lto:contact'+'@officesoftsolutions.com'">Advertise with Us</span>
         </div>
       </div>
     </div>
@@ -199,7 +200,7 @@
           <div class="verify-icon">📧</div>
           <h2>Check Your Email</h2>
           <p class="subtitle">We sent a 6-digit code to</p>
-          <p class="email-display" id="verify-email-display"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="d4a1a7b1a694b1b9b5bdb8fab7bbb9">[email&#160;protected]</a></p>
+          <p class="email-display" id="verify-email-display">your email</p>
           
           <div class="code-inputs" id="code-inputs">
             <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
@@ -241,7 +242,7 @@
             <p>Search Famous Public Documents</p>
           </div>
         </div>
-        <span class="user-badge" id="user-email">👤 <a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="9beee8fee9dbfef6faf2f7b5f8f4f6">[email&#160;protected]</a> <span class="verified-badge">✓</span></span>
+        <span class="user-badge" id="user-email">👤 <span class="verified-badge">✓</span></span>
       </header>
 
       <section class="sources-section">
@@ -313,7 +314,7 @@
     <p>Built by <strong>Office Soft Solutions</strong></p>
   </footer>
 
-  <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  <script>
     const API_BASE = '';
     let currentUser = null;
     let currentSource = 'cia-factbook';
