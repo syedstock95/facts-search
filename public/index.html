@@ -162,10 +162,10 @@
         <div class="source-icons">
           <span>🌍</span><span>📜</span><span>🕊️</span><span>📊</span><span>📚</span>
         </div>
-        <form id="login-form">
-          <input type="email" id="email-input" class="form-input" placeholder="Enter your email to continue" required>
-          <button type="submit" id="login-btn" class="btn-primary">Continue →</button>
-        </form>
+        <div id="login-form">
+          <input type="email" id="email-input" class="form-input" placeholder="Enter your email to continue">
+          <button type="button" id="login-btn" class="btn-primary" onclick="handleLogin()">Continue →</button>
+        </div>
         <small id="login-hint">🔒 Enter your email to get started.</small>
       </div>
 
@@ -380,37 +380,39 @@
     }
 
     // ==================== LOGIN ====================
-    let loginState = 'check'; // 'check' or 'send'
+    let loginState = 'check';
     
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    // Enter key triggers login
+    document.getElementById('email-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); handleLogin(); }
+    });
+
+    async function handleLogin() {
       const email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) { alert('Please enter a valid email'); return; }
       const btn = document.getElementById('login-btn');
       const hint = document.getElementById('login-hint');
       
       if (loginState === 'check') {
-        // Step 1: Check if email exists and is verified
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-small"></span> Checking...';
 
         try {
-          const res = await fetch(`${API_BASE}/api/check-email`, {
+          const res = await fetch('/api/check-email', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: email })
           });
           const data = await res.json();
 
           if (data.verified) {
-            // Already verified — go straight to app
             currentUser = data.email;
             document.getElementById('user-email').innerHTML = '👤 ' + currentUser + ' <span class="verified-badge">✓</span>';
             showScreen('app-screen');
           } else {
-            // Not verified or new — show send code button
             loginState = 'send';
             btn.textContent = 'Send Verification Code →';
-            hint.textContent = '🔒 We\'ll send a 6-digit code to verify your email.';
+            hint.textContent = '🔒 We will send a 6-digit code to verify your email.';
             btn.disabled = false;
           }
         } catch (err) {
@@ -419,15 +421,14 @@
           btn.textContent = 'Continue →';
         }
       } else {
-        // Step 2: Send verification code
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-small"></span> Sending code...';
 
         try {
-          const res = await fetch(`${API_BASE}/api/login`, {
+          const res = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email: email })
           });
           const data = await res.json();
 
@@ -436,7 +437,7 @@
             document.getElementById('verify-email-display').textContent = currentUser;
             showScreen('verify-screen');
             startResendCooldown();
-            setTimeout(() => codeInputs[0].focus(), 300);
+            setTimeout(function() { codeInputs[0].focus(); }, 300);
           } else {
             alert(data.error || 'Failed to send code');
           }
@@ -447,10 +448,10 @@
           btn.textContent = 'Send Verification Code →';
         }
       }
-    });
+    }
 
     // Reset login state when email changes
-    document.getElementById('email-input').addEventListener('input', () => {
+    document.getElementById('email-input').addEventListener('input', function() {
       if (loginState === 'send') {
         loginState = 'check';
         document.getElementById('login-btn').textContent = 'Continue →';
