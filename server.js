@@ -393,6 +393,48 @@ app.post('/api/subscription', async (req, res) => {
 });
 
 // Serve frontend
+// ==================== ADMIN STATS ====================
+app.get('/admin/stats', async (req, res) => {
+  // Check admin key
+  const adminKey = req.query.key;
+  if (adminKey !== process.env.ADMIN_KEY) {
+    return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    // Total registered users
+    const totalUsers = await pool.query('SELECT COUNT(*) FROM users');
+    
+    // Verified users only
+    const verifiedUsers = await pool.query('SELECT COUNT(*) FROM users WHERE verified = true');
+    
+    // Users who logged in today
+    const todayUsers = await pool.query(
+      "SELECT COUNT(*) FROM users WHERE last_login >= CURRENT_DATE"
+    );
+    
+    // Users who logged in this week
+    const weekUsers = await pool.query(
+      "SELECT COUNT(*) FROM users WHERE last_login >= CURRENT_DATE - INTERVAL '7 days'"
+    );
+    
+    // Last 10 registered users
+    const recentUsers = await pool.query(
+      'SELECT email, verified, created_at, last_login FROM users ORDER BY created_at DESC LIMIT 10'
+    );
+
+    res.json({
+      total_users: totalUsers.rows[0].count,
+      verified_users: verifiedUsers.rows[0].count,
+      logged_in_today: todayUsers.rows[0].count,
+      logged_in_this_week: weekUsers.rows[0].count,
+      recent_signups: recentUsers.rows
+    });
+  } catch (err) {
+    console.error('Admin stats error:', err.message);
+    res.status(500).json({ error: 'Failed to get stats' });
+  }
+});
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
